@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "invertervideosystem",
+  "private_key_id": "0250452d1beaf831e7ed83865d6e89a57e6e1c6d",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCaW4QMR4RgK0fC\ntov5uMCvekIh2o4FXqCT47ZCIA6j1f1gcg8pbkP6FannmM5SQij0VHcDHhAG8E9v\nHUFss9w9sPVHNMhHcPrQq+7SCw1V2hSsWmPzjiM6IrR9z8BBmAr7wfVsGUrwNrZM\nJoo/MZvzIHaY7h9lNlKwzn1MqtFZJY+7qc8IOIYwL9Spf+9e/PKKcoMSg44RAk/I\n52YfgIdoDj7/8nk5LpVDeHp02miSFt9c1bcivYl9iKmbp7QXmDd2YlM3ZL1wUeD9\nRuqhJjamSTqiqFQQzCPrydz0xTCegkr+R3U4CM/U0GxnfK4s76noFP7PAdcKzjo1\n7xyqfUb/AgMBAAECggEADDztPzv8VtOXoOxwNKBdRoxe6eg2El7qRE9th9ia0IqK\nyDbC1PoVEaLeEaqf0Q3FyXlY5jpf8uzin2Cma0PnVkzNZZPdvSxL9ndrO+P8bq4X\nrYKNIiZGzLkrrj3mdEzlsggyuRtYQatU0LzNgS0hvCj6vi1C9/dSnwoADTAN4Q9l\nykGfSP4SjPTeuKD7/dhFve/Q0XV7+Oa5EzmBOS8jF1deEntNvgr2uQGIXJE0mT/7\nRUBPu8USPZPnR1hxHPbwqvbLK7g/9FATEGIlcQN+Xki8nJc5FPFs2R9CqAnEhtKz\ndvCbwcc+skbnGT8bJr3ZbiiNwdrf3lY9wMw4iOZ44QKBgQDLh7k59MilYkDfI6sR\nypSdvL1YdoEpiks5UgsO4cwVTFoxMMhSdArHBxOhT/uD5jpUDp8xjz/YwmvPZEJa\na06kG42X1/cnLwY2pBP17zeh6yQ1OLRyYHLo+BTfqFXWDuLcDIMjvz7q/WUnjxbI\n/oIcHvU/ckfKrBp10WIQ0DYnNQKBgQDCJpFRvqDGcbsk8aVXCRAP6mdiHyXLrQMP\nqvVY4dmt5ZVwDvL1odQmVGyp8JGVIRekE4FclKI/SE9C5ml3XKqnKmCMvUOgRzTV\n4R72Ha+MK1L+c2ue31NtRxBxaP1qsSndObIN9GdVS8+1kI3hvXRxaBDGJCKcLL0G\ndcvY87/X4wKBgGzXVQeYTuCajYSGx4oJIrbD4yH2pZX4Xcf2hvFbcM8G+MiLhOUL\nJ2RN9YJzilZ7/T9MXnebWpJpTkwnGpDOB80c6viDxqkOraz0y7PeTIrre352p5Du\n4SSS3l7I37ZMWadBjbPFJzl1bu3byFyONjghmhdm3tuUc8YDxgSlw//tAoGBAIEW\nD4zgSBlpSNq5aAtEVU+ftHlC6GhRcjWan2InWAoNGZzV86hpnpqVi2I6NzGGPSe0\naFBb6rxUoY6DkB/yluxqeqNYu3v3nCOQeHt/JVb2/0l7CFUre1au5zngao3jmUgj\nskUg+Qt3SnUX1Z3/z0oPvQdgwzo/bLa833oyJp2tAoGAKZLk0Hz3D71YqC+FCPAN\ni1jmBSpU/hrBY+s3/MDAh/9nIVduuNEiBRepwu6Ovpvun5zQKSi8kHAPNOitVum0\nh8JGzv3KpswUM0jIZ31qdL0OeYxKP+95phVq303mZ8PiFIJsAzIvEYGD7jH3vkzp\ngHNp9Dboe4dGKquO6x9hYZc=\n-----END PRIVATE KEY-----\n",
+  "client_email": "inverter-uploader@invertervideosystem.iam.gserviceaccount.com",
+  "client_id": "110176421857450508352",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/inverter-uploader%40invertervideosystem.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
