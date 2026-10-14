@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import WithdrawClient from './WithdrawClient';
@@ -294,7 +296,6 @@ export default async function WithdrawPage() {
       const fullSn = backup.serialNumber || '';
       const snLast4 = fullSn.length >= 4 ? fullSn.slice(-4) : fullSn;
       const associatedStockLogs = backup.jobs.flatMap(j => j.stockLogs);
-      // ส่ง Job ID ถ้ามี หรือถ้าไม่มีให้ส่ง Backup ID ไปให้ Server Action จัดการสร้าง Job ให้
       const targetId = backup.jobs[0]?.id || backup.id;
 
       return {
