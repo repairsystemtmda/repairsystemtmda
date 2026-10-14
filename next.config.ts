@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {}, // เพิ่มบรรทัดนี้เพื่อให้ผ่าน error ของ Next.js 16
+  
   allowedDevOrigins: [
     '192.168.1.116',
     '192.168.1.57',
@@ -9,7 +11,6 @@ const nextConfig: NextConfig = {
   ],
   
   experimental: {
-    // 🌟 ใช้แค่ proxyClientMaxBodySize ตัวเดียวพอครับ (ตามที่ Next.js แนะนำ)
     proxyClientMaxBodySize: '50mb',
     
     serverActions: {
