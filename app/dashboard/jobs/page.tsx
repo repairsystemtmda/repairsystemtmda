@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -464,7 +466,6 @@ export default function JobsPage() {
       <div className="w-full space-y-4">
         {loading ? (
           <div className="w-full space-y-3">
-            {/* โครงร่างจำลอง (Skeleton UI) สำหรับมือถือ */}
             <div className="grid grid-cols-1 gap-3 md:hidden">
               {[1, 2, 3, 4].map((n) => (
                 <div key={n} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm space-y-3 animate-pulse">
@@ -481,7 +482,6 @@ export default function JobsPage() {
               ))}
             </div>
 
-            {/* โครงร่างจำลอง (Skeleton UI) สำหรับคอมพิวเตอร์ */}
             <div className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <div className="animate-pulse space-y-4">
                 <div className="h-10 bg-gray-200 rounded-xl w-full"></div>
@@ -495,7 +495,6 @@ export default function JobsPage() {
           </div>
         ) : filteredJobs.length > 0 ? (
           <>
-            {/* Mobile Card View */}
             <div className="grid grid-cols-1 gap-3 md:hidden">
               {currentJobs.map((job) => {
                 const brandName = job.brand?.name ? `(${job.brand.name})` : '';
@@ -569,7 +568,6 @@ export default function JobsPage() {
               })}
             </div>
 
-            {/* Desktop Table View */}
             <div className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden w-full">
               <div className="w-full overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[1200px]">
