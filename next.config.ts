@@ -1,8 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  turbopack: {}, // เพิ่มบรรทัดนี้เพื่อให้ผ่าน error ของ Next.js 16
-  
   allowedDevOrigins: [
     '192.168.1.116',
     '192.168.1.57',
