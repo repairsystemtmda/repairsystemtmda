@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -71,7 +71,7 @@ const STANDARD_CATEGORIES = [
   'อินเวอร์เตอร์ปั๊มน้ำ'
 ];
 
-export default function JobsPage() {
+function JobsContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const statusParam = searchParams.get('status');
@@ -731,5 +731,13 @@ export default function JobsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500 font-bold">กำลังโหลดข้อมูล...</div>}>
+      <JobsContent />
+    </Suspense>
   );
 }
