@@ -12,6 +12,7 @@
     "@auth/prisma-adapter": "^2.11.3",
     "@line/bot-sdk": "^11.2.0",
     "@prisma/client": "^5.22.0",
+    "@supabase/supabase-js": "^2.118.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.4",
