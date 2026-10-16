@@ -263,14 +263,12 @@ export default function NewJobPage() {
           payload.imageUrl = publicUrlData.publicUrl;
         }
 
-        // 2. อัปโหลดรูปภาพหลักฐานอื่นๆ ไปยัง Supabase Storage
+        // 2. อัปโหลดรูปภาพหลักฐานอื่นๆ ไปยัง Supabase Storage แบบ Parallel Upload
         if (selectedFiles.length > 0) {
           setUploadProgress(50);
           setLoadingText("กำลังบีบอัดและอัปโหลดรูปภาพหลักฐาน...");
 
-          const uploadedUrls: string[] = [];
-          for (let i = 0; i < selectedFiles.length; i++) {
-            const file = selectedFiles[i];
+          const uploadPromises = selectedFiles.map(async (file, i) => {
             const compressed = await compressImage(file);
             const fileName = `job-${Date.now()}-${i}-${Math.round(Math.random() * 1e9)}.jpg`;
 
@@ -286,8 +284,10 @@ export default function NewJobPage() {
               .from("repair-images")
               .getPublicUrl(fileName);
 
-            uploadedUrls.push(publicUrlData.publicUrl);
-          }
+            return publicUrlData.publicUrl;
+          });
+
+          const uploadedUrls = await Promise.all(uploadPromises);
           payload.images = uploadedUrls;
         }
       }
