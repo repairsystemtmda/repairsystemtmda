@@ -4,6 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Camera, Upload, Box, Wifi, Activity, Cpu, FileText, X, ScanLine, Tag, Loader2, UserCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+
+// กำหนดค่า Supabase Client สำหรับอัปโหลดตรงฝั่งหน้าบ้าน
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function compressImage(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
@@ -68,7 +74,6 @@ export default function NewJobPage() {
   const [hasWifiDongle, setHasWifiDongle] = useState(false);
   const [initialStatus, setInitialStatus] = useState("PENDING");
   
-  // State สำหรับยืมเครื่องสำรอง
   const [backupCategoryFilter, setBackupCategoryFilter] = useState("อินเวอร์เตอร์");
   const [backupBrandFilter, setBackupBrandFilter] = useState("");
   const [allBackupDevices, setAllBackupDevices] = useState<any[]>([]);
@@ -124,7 +129,6 @@ export default function NewJobPage() {
         console.error("Error fetching brands:", err);
       });
 
-    // ดึงรายการเครื่องสำรองทั้งหมดจาก API คลัง
     fetch("/api/inventory/backups")
       .then(async (res) => {
         if (res.ok) return res.json();
@@ -156,7 +160,6 @@ export default function NewJobPage() {
     }
   };
 
-  // 🌟 กรองเฉพาะเครื่องสำรองที่พร้อมใช้งาน (AVAILABLE หรือ READY) เท่านั้น และตรงตามหมวดหมู่/แบรนด์
   const filteredBackupDevices = allBackupDevices.filter((dev) => {
     const statusUpper = (dev.status || '').toUpperCase();
     const isAvailable = statusUpper === 'AVAILABLE' || statusUpper === 'READY';
@@ -180,7 +183,7 @@ export default function NewJobPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
+    const formElement = e.currentTarget;
     const isDirectLoan = initialStatus === "IN_USE_BACKUP";
 
     if (isDirectLoan) {
@@ -189,7 +192,7 @@ export default function NewJobPage() {
         return;
       }
     } else {
-      const actualBrand = brand === "OTHER" ? customBrand.trim() : brand;
+      const actualBrand = brand === "OTHER" ? (formElement.elements.namedItem("customBrand") as HTMLInputElement)?.value.trim() : brand;
       if (!actualBrand) {
         alert("กรุณาระบุชื่อแบรนด์อุปกรณ์");
         return;
@@ -212,51 +215,93 @@ export default function NewJobPage() {
     setLoadingText("กำลังตรวจสอบข้อมูลฟอร์ม...");
 
     try {
-      const formData = new FormData(e.currentTarget);
-      formData.set("hasBox", hasBox ? "true" : "false");
-      formData.set("hasWifiDongle", ((category === "อินเวอร์เตอร์" || category === "Inverter") && hasWifiDongle) ? "true" : "false");
-      formData.set("status", initialStatus);
-      
-      formData.set("userId", currentUser.id);
-      formData.set("userName", currentUser.name);
-      formData.set("receiverName", currentUser.name);
-      
-      if (isDirectLoan) {
-        formData.set("backupDeviceId", selectedBackupDevice);
-      } else {
-        const actualBrand = brand === "OTHER" ? customBrand.trim() : brand;
-        formData.set("brand", actualBrand);
+      const formDataObj = new FormData(formElement);
+      const actualBrand = brand === "OTHER" ? String(formDataObj.get("customBrand") || "").trim() : brand;
 
+      const payload: any = {
+        status: initialStatus,
+        category,
+        brand: actualBrand,
+        customerName: String(formDataObj.get("customerName") || ""),
+        phone: String(formDataObj.get("phone") || ""),
+        model: String(formDataObj.get("model") || ""),
+        serialNumber: String(formDataObj.get("serialNumber") || ""),
+        productNo: String(formDataObj.get("productNo") || ""),
+        newSerialNumber: String(formDataObj.get("newSerialNumber") || ""),
+        wifiDongleSn: String(formDataObj.get("wifiDongleSn") || ""),
+        note: String(formDataObj.get("note") || ""),
+        hasBox,
+        hasWifiDongle: (category === "อินเวอร์เตอร์" || category === "Inverter") && hasWifiDongle,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        receiverName: currentUser.name,
+        backupDeviceId: isDirectLoan ? selectedBackupDevice : undefined,
+        imageUrl: null,
+        images: [],
+      };
+
+      if (!isDirectLoan) {
+        // 1. อัปโหลดรูปเนมเพลทไปยัง Supabase Storage (ถ้ามี)
         if (nameplateFile) {
-          formData.set("nameplateImage", nameplateFile);
+          setUploadProgress(30);
+          setLoadingText("กำลังอัปโหลดรูปเนมเพลทไปยัง Supabase Storage...");
+          const compressedNameplate = await compressImage(nameplateFile);
+          const fileName = `nameplate-${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from("repair-images")
+            .upload(fileName, compressedNameplate, { contentType: "image/jpeg" });
+
+          if (uploadError) {
+            throw new Error("อัปโหลดรูปเนมเพลทไม่สำเร็จ: " + uploadError.message);
+          }
+
+          const { data: publicUrlData } = supabase.storage
+            .from("repair-images")
+            .getPublicUrl(fileName);
+
+          payload.imageUrl = publicUrlData.publicUrl;
         }
 
-        formData.delete("images");
-        
-        setUploadProgress(30);
-        setLoadingText("กำลังบีบอัดรูปภาพให้มีขนาดเหมาะสม...");
+        // 2. อัปโหลดรูปภาพหลักฐานอื่นๆ ไปยัง Supabase Storage
+        if (selectedFiles.length > 0) {
+          setUploadProgress(50);
+          setLoadingText("กำลังบีบอัดและอัปโหลดรูปภาพหลักฐาน...");
 
-        const compressedFilesPromises = selectedFiles.map(async (file) => {
-          try {
-            return await compressImage(file);
-          } catch (err) {
-            console.error("Compression failed, using original file:", err);
-            return file;
+          const uploadedUrls: string[] = [];
+          for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            const compressed = await compressImage(file);
+            const fileName = `job-${Date.now()}-${i}-${Math.round(Math.random() * 1e9)}.jpg`;
+
+            const { error: uploadError } = await supabase.storage
+              .from("repair-images")
+              .upload(fileName, compressed, { contentType: "image/jpeg" });
+
+            if (uploadError) {
+              throw new Error(`อัปโหลดรูปที่ ${i + 1} ไม่สำเร็จ: ` + uploadError.message);
+            }
+
+            const { data: publicUrlData } = supabase.storage
+              .from("repair-images")
+              .getPublicUrl(fileName);
+
+            uploadedUrls.push(publicUrlData.publicUrl);
           }
-        });
-
-        const compressedFiles = await Promise.all(compressedFilesPromises);
-        for (const file of compressedFiles) {
-          formData.append("images", file);
+          payload.images = uploadedUrls;
         }
       }
       
-      setUploadProgress(70);
-      setLoadingText("กำลังอัปโหลดข้อมูลเข้าสู่ระบบ...");
+      setUploadProgress(80);
+      setLoadingText("กำลังบันทึกข้อมูลเข้าสู่ระบบ...");
 
+      // ส่งข้อมูลแบบ JSON ไปยัง API
       const response = await fetch("/api/jobs", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
 
       setUploadProgress(100);
@@ -279,9 +324,9 @@ export default function NewJobPage() {
         setIsSubmitting(false);
         setUploadProgress(0);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
+      alert(error.message || "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
       setIsSubmitting(false);
       setUploadProgress(0);
     }
@@ -308,7 +353,7 @@ export default function NewJobPage() {
 
             <div className="space-y-1.5">
               <h3 className="text-base sm:text-lg font-bold text-gray-900">{loadingText}</h3>
-              <p className="text-xs sm:text-sm text-gray-500">กรุณารอสักครู่ ระบบกำลังประมวลผลบันทึกข้อมูล</p>
+              <p className="text-xs sm:text-sm text-gray-500">กรุณารอสักครู่ ระบบกำลังอัปโหลดรูปภาพและบันทึกข้อมูล</p>
             </div>
 
             <div className="space-y-2">
@@ -357,7 +402,6 @@ export default function NewJobPage() {
             <input type="hidden" name="userId" value={currentUser.id} />
             <input type="hidden" name="receiverName" value={currentUser.name} />
 
-            {/* เลือกประเภทรายการ */}
             <div className="p-3.5 sm:p-4 bg-amber-50/50 border border-amber-200 rounded-xl space-y-3">
               <label className="block text-xs sm:text-sm font-semibold text-amber-900 flex items-center gap-2">
                 <Activity className="w-4 h-4 text-amber-600 shrink-0" /> ประเภทรายการ / สถานะเริ่มต้น (Job Status) *
@@ -379,7 +423,6 @@ export default function NewJobPage() {
                   <span className="text-[11px] text-gray-500 pl-5">รอซ่อม / รับเรื่องใหม่</span>
                 </label>
 
-                {/* สไตล์ปุ่ม IN_USE_BACKUP */}
                 <label className={`flex flex-col p-3 border rounded-xl cursor-pointer transition ${initialStatus === 'IN_USE_BACKUP' ? 'bg-white border-amber-500 ring-2 ring-amber-400/20 shadow-sm' : 'bg-white/60 border-gray-200 hover:bg-white'}`}>
                   <div className="flex items-center gap-2 mb-1">
                     <input
@@ -428,7 +471,6 @@ export default function NewJobPage() {
               </div>
             </div>
 
-            {/* หากเป็นเคส IN_USE_BACKUP (ยืมเครื่องสำรองชั่วคราว / VVVIP) */}
             {isDirectLoanMode ? (
               <div className="space-y-4 border-2 border-blue-200 bg-blue-50/30 p-4 sm:p-6 rounded-2xl">
                 
@@ -543,7 +585,6 @@ export default function NewJobPage() {
 
               </div>
             ) : (
-              /* หากเป็นสถานะปกติ */
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -783,7 +824,6 @@ export default function NewJobPage() {
                       <label className="border-2 border-dashed border-indigo-300 bg-white rounded-xl p-4 text-center hover:bg-indigo-50/30 transition cursor-pointer block">
                         <input 
                           type="file" 
-                          name="nameplateImage" 
                           accept="image/*" 
                           className="sr-only"
                           onChange={(e) => {
@@ -838,7 +878,6 @@ export default function NewJobPage() {
                   <label className="border-2 border-dashed border-gray-300 rounded-2xl p-5 text-center hover:bg-gray-50 transition cursor-pointer block relative">
                     <input 
                       type="file" 
-                      name="images" 
                       multiple 
                       accept="image/*" 
                       className="sr-only"

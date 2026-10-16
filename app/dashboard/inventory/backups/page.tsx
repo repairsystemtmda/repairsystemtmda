@@ -106,7 +106,6 @@ export default async function BackupInvertersPage({
     };
   }
 
-  // 🌟 ปรับปรุงเงื่อนไข Status ให้รองรับการค้นหาตามกลุ่มจาก backupUtils อย่างครอบคลุม
   let statusCondition = {};
   if (status) {
     const upperStatus = status.toUpperCase();

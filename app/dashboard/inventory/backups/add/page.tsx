@@ -4,6 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, Box, Wifi, Upload, FileText, X, ScanLine, Tag, Loader2 } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+// กำหนดค่า Supabase Client สำหรับอัปโหลดตรงฝั่งหน้าบ้าน
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface BrandItem {
   id: string;
@@ -161,37 +167,100 @@ export default function AddBackupDevicePage() {
       setUploadProgress(10);
       setLoadingText("กำลังตรวจสอบข้อมูลฟอร์ม...");
 
-      const formData = new FormData(e.currentTarget);
-      formData.set("category", category);
-      formData.set("brand", currentBrand);
-      formData.set("hasBox", hasBox ? "true" : "false");
-      formData.set("hasWifiDongle", ((category === "อินเวอร์เตอร์" || category === "Inverter") && hasWifiDongle) ? "true" : "false");
-      formData.set("status", deviceStatus);
+      const formElement = e.currentTarget;
+      const formDataObj = new FormData(formElement);
 
-      formData.set("receiverId", currentUser.id);
-      formData.set("receiverName", currentUser.name);
+      const model = String(formDataObj.get("model") || "").trim();
+      const serialNumber = String(formDataObj.get("serialNumber") || "").trim();
+      const productNo = String(formDataObj.get("productNo") || "").trim();
+      const wifiDongleSn = String(formDataObj.get("wifiDongleSn") || "").trim();
+      const note = String(formDataObj.get("note") || "").trim();
 
+      if (!model || !serialNumber) {
+        alert("กรุณากรอกรุ่น (Model) และ Serial Number ให้ครบถ้วน");
+        setLoading(false);
+        setUploadProgress(0);
+        return;
+      }
+
+      let imageUrl: string | null = null;
+      const uploadedImages: string[] = [];
+
+      // 1. อัปโหลดรูปเนมเพลทตรงไปยัง Supabase Storage (ถ้ามี)[cite: 7]
       if (nameplateFile) {
-        formData.set("nameplateImage", nameplateFile);
-      } else {
-        formData.delete("nameplateImage");
+        setUploadProgress(30);
+        setLoadingText("กำลังบีบอัดและอัปโหลดรูปเนมเพลท...");
+        const compressedNameplate = await resizeImage(nameplateFile, 1200, 1200, 0.7);
+        const fileName = `backup-nameplate-${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("repair-images")
+          .upload(fileName, compressedNameplate, { contentType: "image/jpeg" });
+
+        if (uploadError) {
+          throw new Error("อัปโหลดรูปเนมเพลทไม่สำเร็จ: " + uploadError.message);
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("repair-images")
+          .getPublicUrl(fileName);
+
+        imageUrl = publicUrlData.publicUrl;
       }
 
-      setUploadProgress(30);
-      setLoadingText("กำลังบีบอัดรูปภาพ (คุณภาพ 0.7)...");
+      // 2. อัปโหลดรูปภาพสภาพเครื่องเพิ่มเติมตรงไปยัง Supabase Storage[cite: 7]
+      if (selectedFiles.length > 0) {
+        setUploadProgress(50);
+        setLoadingText("กำลังบีบอัดและอัปโหลดรูปภาพหลักฐาน...");
 
-      formData.delete("images");
-      for (const file of selectedFiles) {
-        const compressedFile = await resizeImage(file, 1200, 1200, 0.7);
-        formData.append("images", compressedFile);
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          const compressed = await resizeImage(file, 1200, 1200, 0.7);
+          const fileName = `backup-image-${Date.now()}-${i}-${Math.round(Math.random() * 1e9)}.jpg`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("repair-images")
+            .upload(fileName, compressed, { contentType: "image/jpeg" });
+
+          if (uploadError) {
+            throw new Error(`อัปโหลดรูปที่ ${i + 1} ไม่สำเร็จ: ` + uploadError.message);
+          }
+
+          const { data: publicUrlData } = supabase.storage
+            .from("repair-images")
+            .getPublicUrl(fileName);
+
+          uploadedImages.push(publicUrlData.publicUrl);
+        }
       }
 
-      setUploadProgress(70);
-      setLoadingText("กำลังอัปโหลดข้อมูลและรูปภาพเข้าสู่ระบบ...");
+      setUploadProgress(80);
+      setLoadingText("กำลังบันทึกข้อมูลเข้าสู่ระบบ...");
+
+      // ส่งข้อมูลในรูปแบบ JSON ไปยัง API[cite: 7]
+      const payload = {
+        status: deviceStatus,
+        category,
+        brand: currentBrand,
+        model,
+        serialNumber,
+        productNo,
+        hasBox,
+        hasWifiDongle: (category === "อินเวอร์เตอร์" || category === "Inverter") && hasWifiDongle,
+        wifiDongleSn,
+        note,
+        receiverId: currentUser.id,
+        receiverName: currentUser.name,
+        imageUrl,
+        images: uploadedImages,
+      };
 
       const res = await fetch('/api/inventory/backups', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
 
       const responseText = await res.text();
@@ -213,9 +282,9 @@ export default function AddBackupDevicePage() {
         setLoading(false);
         setUploadProgress(0);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create backup device:', err);
-      alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+      alert(err.message || 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
       setLoading(false);
       setUploadProgress(0);
     }
@@ -238,7 +307,7 @@ export default function AddBackupDevicePage() {
 
             <div className="space-y-1.5">
               <h3 className="text-base sm:text-lg font-bold text-gray-900">{loadingText}</h3>
-              <p className="text-xs sm:text-sm text-gray-500">กรุณารอสักครู่ ระบบกำลังประมวลผลไฟล์และบันทึกข้อมูล</p>
+              <p className="text-xs sm:text-sm text-gray-500">กรุณารอสักครู่ ระบบกำลังอัปโหลดรูปภาพและบันทึกข้อมูล</p>
             </div>
 
             <div className="space-y-2">
@@ -508,7 +577,6 @@ export default function AddBackupDevicePage() {
                   <label className="border-2 border-dashed border-indigo-300 bg-white rounded-xl p-4 text-center hover:bg-indigo-50/30 transition cursor-pointer block">
                     <input 
                       type="file" 
-                      name="nameplateImage" 
                       accept="image/*" 
                       className="sr-only"
                       onChange={(e) => {
@@ -528,20 +596,21 @@ export default function AddBackupDevicePage() {
                   <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-gray-600">รูปเนมเพลทที่เลือก (1 ไฟล์):</span>
-                      <button
-                        type="button"
-                        onClick={() => setNameplateFile(null)}
-                        className="text-xs text-red-600 hover:text-red-700 font-medium py-1 px-2"
-                      >
-                        ลบไฟล์
-                      </button>
                     </div>
                     <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-gray-200 text-xs shadow-sm">
                       <div className="flex items-center gap-2 truncate pr-2">
                         <FileText className="w-4 h-4 text-blue-500 shrink-0" />
                         <span className="font-semibold text-gray-900 truncate">{nameplateFile.name}</span>
+                        <span className="text-gray-500 text-[10px]">({(nameplateFile.size / 1024).toFixed(1)} KB)</span>
                       </div>
-                      <span className="text-emerald-600 font-medium text-[11px] shrink-0">อัปโหลดแล้ว</span>
+                      <button
+                        type="button"
+                        onClick={() => setNameplateFile(null)}
+                        className="p-1 text-gray-400 hover:text-red-600 rounded transition shrink-0"
+                        title="ลบไฟล์นี้"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 )}
@@ -557,7 +626,6 @@ export default function AddBackupDevicePage() {
               <label className="border-2 border-dashed border-gray-300 rounded-2xl p-5 text-center hover:bg-gray-50 transition cursor-pointer block">
                 <input 
                   type="file" 
-                  name="images" 
                   multiple 
                   accept="image/*" 
                   className="sr-only"
@@ -565,7 +633,7 @@ export default function AddBackupDevicePage() {
                     if (e.target.files) {
                       const newFiles = Array.from(e.target.files);
                       setSelectedFiles((prev) => [...prev, ...newFiles]);
-                      e.target.value = ""; // เคลียร์ค่าเพื่อให้สามารถเลือกไฟล์ซ้ำหรือเลือกเพิ่มรอบใหม่ได้
+                      e.target.value = ""; 
                     }
                   }}
                 />
@@ -601,6 +669,7 @@ export default function AddBackupDevicePage() {
                         <div className="flex items-center gap-2 truncate pr-2">
                           <FileText className="w-4 h-4 text-blue-500 shrink-0" />
                           <span className="font-semibold text-gray-900 truncate">{file.name}</span>
+                          <span className="text-gray-500 text-[10px]">({(file.size / 1024).toFixed(1)} KB)</span>
                         </div>
                         <button
                           type="button"

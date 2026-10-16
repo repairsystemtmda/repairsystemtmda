@@ -7,7 +7,6 @@ import { Package, PlusCircle, MinusCircle, RotateCcw, History, Eye, AlertTriangl
 import DeleteButton from './_components/DeleteButton';
 import InventoryFilterForm from './_components/InventoryFilterForm';
 
-// บังคับให้หน้าเว็บเรนเดอร์แบบ Dynamic สดใหม่เสมอ ไม่เก็บแคช ช่วยให้โหลดเร็วและข้อมูลอัปเดตทันที
 export const dynamic = 'force-dynamic';
 
 const STANDARD_BOARD_TYPES = [
@@ -29,6 +28,7 @@ export default async function InventoryPage({
   const filter = resolvedSearchParams?.filter || '';
   const page = Number(resolvedSearchParams?.page) || 1;
   const limit = 10;
+  const skip = (page - 1) * limit;
 
   // ตรวจสอบสิทธิ์ผู้ใช้งานปัจจุบันจากฐานข้อมูลจริง
   const session = await getServerSession(authOptions);
@@ -39,7 +39,10 @@ export default async function InventoryPage({
 
   const isAdmin = currentUser?.role === 'ADMIN';
 
-  const allPartsForCount = await prisma.sparePart.findMany();
+  // 🌟 [Optimize] ดึงเฉพาะฟิลด์ stock และ minQuantity มานับจำนวนเหลือน้อย เพื่อความรวดเร็ว
+  const allPartsForCount = await prisma.sparePart.findMany({
+    select: { stock: true, minQuantity: true },
+  });
   const lowStockTotal = allPartsForCount.filter((part) => part.stock <= part.minQuantity).length;
 
   let boardTypeCondition = {};
@@ -53,31 +56,50 @@ export default async function InventoryPage({
     boardTypeCondition = { boardType: boardType };
   }
 
-  let spareParts = await prisma.sparePart.findMany({
-    where: {
-      AND: [
-        query ? {
-          OR: [
-            { name: { contains: query } },
-            { boardModelCode: { contains: query } },
-            { model: { contains: query } },
-            { qrModelCode: { contains: query } },
-          ],
-        } : {},
-        category ? { category: category } : {},
-        boardTypeCondition,
-      ],
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  const whereCondition: any = {
+    AND: [
+      query ? {
+        OR: [
+          { name: { contains: query } },
+          { boardModelCode: { contains: query } },
+          { model: { contains: query } },
+          { qrModelCode: { contains: query } },
+        ],
+      } : {},
+      category ? { category: category } : {},
+      boardTypeCondition,
+    ],
+  };
+
+  // หากเลือกตัวกรองอะไหล่เหลือน้อย
+  let spareParts: any[] = [];
+  let totalItems = 0;
 
   if (filter === 'low' && isAdmin) {
-    spareParts = spareParts.filter((part) => part.stock <= part.minQuantity);
+    // กรณีดูเฉพาะเหลือน้อย ดึงทั้งหมดมา filter แล้วทำ Pagination แบบปลอดภัย
+    const allFiltered = await prisma.sparePart.findMany({
+      where: whereCondition,
+      orderBy: { createdAt: 'desc' },
+    });
+    const lowStockParts = allFiltered.filter((part) => part.stock <= part.minQuantity);
+    totalItems = lowStockParts.length;
+    spareParts = lowStockParts.slice(skip, skip + limit);
+  } else {
+    // 🌟 [Optimize] ใช้ Database-level Pagination (skip & take) โหลดเฉพาะหน้าที่แสดงผลจริง ๆ
+    const [fetchedParts, countResult] = await Promise.all([
+      prisma.sparePart.findMany({
+        where: whereCondition,
+        orderBy: { createdAt: 'desc' },
+        skip: skip,
+        take: limit,
+      }),
+      prisma.sparePart.count({ where: whereCondition }),
+    ]);
+    spareParts = fetchedParts;
+    totalItems = countResult;
   }
 
-  const totalItems = spareParts.length;
   const totalPages = Math.ceil(totalItems / limit) || 1;
-  const paginatedSpareParts = spareParts.slice((page - 1) * limit, page * limit);
 
   async function deleteSparePart(formData: FormData) {
     'use server';
@@ -118,9 +140,7 @@ export default async function InventoryPage({
           <p className="text-xs sm:text-sm text-gray-600 mt-1 font-medium">จัดการสต็อก ตรวจสอบบอร์ด และบันทึกความเคลื่อนไหว</p>
         </div>
         
-        {/* จัดกลุ่มปุ่มหลัก ปรับปรุงให้ใช้งานบนมือถือได้กระชับและแสดงไอคอนชัดเจนขึ้น */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-          {/* ปุ่มอะไหล่เหลือน้อย (แสดงเฉพาะ ADMIN เท่านั้น) */}
           {isAdmin && (
             <Link
               href={`/dashboard/inventory/boards?query=${query}&category=${category}&boardType=${boardType}&filter=low`}
@@ -136,7 +156,6 @@ export default async function InventoryPage({
           )}
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
-            {/* ปุ่มเติมสต็อก / ลงทะเบียน */}
             <Link
               href="/dashboard/inventory/boards/restock"
               className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition text-center whitespace-nowrap"
@@ -145,7 +164,6 @@ export default async function InventoryPage({
               <span>เติมสต็อก</span>
             </Link>
 
-            {/* ปุ่มเบิกอะไหล่ */}
             <Link
               href="/dashboard/inventory/boards/withdraw"
               className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition text-center whitespace-nowrap"
@@ -154,7 +172,6 @@ export default async function InventoryPage({
               <span>เบิกอะไหล่</span>
             </Link>
 
-            {/* ปุ่มคืนอะไหล่ */}
             <Link
               href="/dashboard/inventory/boards/job-restock"
               className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition text-center whitespace-nowrap"
@@ -163,7 +180,6 @@ export default async function InventoryPage({
               <span>คืนอะไหล่</span>
             </Link>
 
-            {/* ปุ่มประวัติ (แสดงเฉพาะ ADMIN เท่านั้น) */}
             {isAdmin && (
               <Link
                 href="/dashboard/inventory/logs"
@@ -177,7 +193,6 @@ export default async function InventoryPage({
         </div>
       </div>
 
-      {/* แถบแจ้งเตือนเมื่อเปิดโหมดกรองอะไหล่เหลือน้อย (แสดงเฉพาะ ADMIN) */}
       {isAdmin && filter === 'low' && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm shadow-sm font-semibold">
           <div className="flex items-center gap-2">
@@ -193,7 +208,6 @@ export default async function InventoryPage({
         </div>
       )}
 
-      {/* ฟอร์มค้นหาและตัวกรองแบบไดนามิก */}
       <InventoryFilterForm
         initialQuery={query}
         initialCategory={category}
@@ -201,13 +215,12 @@ export default async function InventoryPage({
         initialFilter={filter}
       />
 
-      {/* รายการอะไหล่: แปลงเป็น Card สไตล์มือถือ และตารางสำหรับ Desktop */}
       <div className="space-y-3.5">
-        {paginatedSpareParts.length > 0 ? (
+        {spareParts.length > 0 ? (
           <>
-            {/* 📱 มุมมองมือถือ: แสดงผลแบบ Card แนวตั้ง */}
+            {/* มุมมองมือถือ */}
             <div className="grid grid-cols-1 gap-3.5 sm:hidden">
-              {paginatedSpareParts.map((part) => (
+              {spareParts.map((part) => (
                 <div key={part.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -216,7 +229,6 @@ export default async function InventoryPage({
                       </span>
                       <h2 className="text-base font-bold text-gray-900 mt-1.5">{part.name}</h2>
                     </div>
-                    {/* จำนวนคงเหลือ */}
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-bold shadow-xs flex-shrink-0 ${
                       part.stock > part.minQuantity 
                         ? 'bg-emerald-600 text-white' 
@@ -269,7 +281,7 @@ export default async function InventoryPage({
               ))}
             </div>
 
-            {/* 💻 มุมมองคอมพิวเตอร์ (Desktop): แสดงผลเป็นตารางปกติ */}
+            {/* มุมมอง Desktop */}
             <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[1100px]">
@@ -286,7 +298,7 @@ export default async function InventoryPage({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-sm text-gray-900 font-medium">
-                    {paginatedSpareParts.map((part) => (
+                    {spareParts.map((part) => (
                       <tr key={part.id} className="hover:bg-gray-50/50 transition">
                         <td className="p-4 font-mono font-bold text-gray-900">
                           {part.boardModelCode || '-'}
@@ -355,7 +367,7 @@ export default async function InventoryPage({
               </div>
             </div>
 
-            {/* ส่วนแบ่งหน้า (Pagination Footer) พร้อมปุ่มเลือกหน้าแบบเดียวกับหน้า Logs */}
+            {/* Pagination Footer */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs font-extrabold text-gray-700">
                 แสดงหน้า <strong className="text-gray-900 font-black">{page}</strong> จากทั้งหมด <strong className="text-gray-900 font-black">{totalPages}</strong> หน้า (พบรายการทั้งหมด {totalItems} รายการ)
@@ -369,7 +381,6 @@ export default async function InventoryPage({
                   <ChevronLeft className="w-4 h-4 font-bold" /> ก่อนหน้า
                 </Link>
 
-                {/* ปุ่มแสดงหมายเลขหน้าทั้งหมด */}
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                   <Link
                     key={pageNum}
