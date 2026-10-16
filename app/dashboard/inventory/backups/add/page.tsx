@@ -208,13 +208,12 @@ export default function AddBackupDevicePage() {
         imageUrl = publicUrlData.publicUrl;
       }
 
-      // 2. อัปโหลดรูปภาพสภาพเครื่องเพิ่มเติมตรงไปยัง Supabase Storage[cite: 7]
+      // 2. อัปโหลดรูปภาพสภาพเครื่องเพิ่มเติมตรงไปยัง Supabase Storage แบบ Parallel Upload (พร้อมกันทีเดียว)[cite: 7]
       if (selectedFiles.length > 0) {
         setUploadProgress(50);
         setLoadingText("กำลังบีบอัดและอัปโหลดรูปภาพหลักฐาน...");
 
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const file = selectedFiles[i];
+        const uploadPromises = selectedFiles.map(async (file, i) => {
           const compressed = await resizeImage(file, 1200, 1200, 0.7);
           const fileName = `backup-image-${Date.now()}-${i}-${Math.round(Math.random() * 1e9)}.jpg`;
 
@@ -230,8 +229,12 @@ export default function AddBackupDevicePage() {
             .from("repair-images")
             .getPublicUrl(fileName);
 
-          uploadedImages.push(publicUrlData.publicUrl);
-        }
+          return publicUrlData.publicUrl;
+        });
+
+        // รอให้อัปโหลดทุกรูปเสร็จพร้อมกันในรอบเดียว
+        const results = await Promise.all(uploadPromises);
+        uploadedImages.push(...results);
       }
 
       setUploadProgress(80);
