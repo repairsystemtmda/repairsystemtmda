@@ -413,10 +413,20 @@ export default function BackupDeviceFormClient({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleQuickStatusUpdate('MAINTENANCE')}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              บันทึกส่งซ่อมบำรุง / เครื่องเสีย (MAINTENANCE) <ArrowRight className="w-4 h-4 ml-1" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>กำลังบันทึกส่งซ่อม...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  <span>บันทึกส่งซ่อมบำรุง / เครื่องเสีย (MAINTENANCE)</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </>
+              )}
             </button>
           )}
 
@@ -426,20 +436,40 @@ export default function BackupDeviceFormClient({
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => handleQuickStatusUpdate('AVAILABLE')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                รับเครื่องคืน / พร้อมใช้งาน (AVAILABLE) <ArrowRight className="w-4 h-4 ml-1" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>กำลังบันทึก...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>รับเครื่องคืน / พร้อมใช้งาน (AVAILABLE)</span>
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </>
+                )}
               </button>
 
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => handleQuickStatusUpdate('MAINTENANCE')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                รับเครื่องคืน / ส่งซ่อมบำรุง (MAINTENANCE) <ArrowRight className="w-4 h-4 ml-1" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>กำลังบันทึก...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>รับเครื่องคืน / ส่งซ่อมบำรุง (MAINTENANCE)</span>
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </>
+                )}
               </button>
             </>
           )}
@@ -464,10 +494,20 @@ export default function BackupDeviceFormClient({
                       type="button"
                       disabled={isSubmitting}
                       onClick={() => handleQuickStatusUpdate('AVAILABLE')}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-50"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                      ซ่อมเสร็จ / พร้อมใช้ (AVAILABLE) <ArrowRight className="w-4 h-4 ml-1" />
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                          <span>กำลังบันทึก...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>ซ่อมเสร็จ / พร้อมใช้ (AVAILABLE)</span>
+                          <ArrowRight className="w-4 h-4 ml-1" />
+                        </>
+                      )}
                     </button>
                   );
                 }
@@ -478,10 +518,20 @@ export default function BackupDeviceFormClient({
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => handleQuickStatusUpdate('WAITING_DEYE_SEND')}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
-                รอส่ง Deye <ArrowRight className="w-4 h-4 ml-1" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>กำลังเปลี่ยนสถานะ...</span>
+                  </>
+                ) : (
+                  <>
+                    <Truck className="w-4 h-4" />
+                    <span>รอส่ง Deye</span>
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </>
+                )}
               </button>
             </>
           )}
@@ -491,10 +541,20 @@ export default function BackupDeviceFormClient({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleQuickStatusUpdate('SENT_TO_DEYE')}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Truck className="w-4 h-4" />}
-              ส่งเครื่องไป Deye แล้ว <ArrowRight className="w-4 h-4 ml-1" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <Truck className="w-4 h-4" />
+                  <span>ส่งเครื่องไป Deye แล้ว</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </>
+              )}
             </button>
           )}
 
@@ -503,10 +563,20 @@ export default function BackupDeviceFormClient({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleQuickStatusUpdate('COMPLETED_BY_DEYE')}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-              Deye ซ่อมเสร็จกลับมาแล้ว <ArrowRight className="w-4 h-4 ml-1" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Deye ซ่อมเสร็จกลับมาแล้ว</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </>
+              )}
             </button>
           )}
 
@@ -515,10 +585,20 @@ export default function BackupDeviceFormClient({
               type="button"
               disabled={isSubmitting}
               onClick={() => handleQuickStatusUpdate('AVAILABLE')}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs md:text-sm transition shadow-md cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-              นำเข้าคลังพร้อมใช้ (AVAILABLE) <ArrowRight className="w-4 h-4 ml-1" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>กำลังนำเข้าคลัง...</span>
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="w-4 h-4" />
+                  <span>นำเข้าคลังพร้อมใช้ (AVAILABLE)</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </>
+              )}
             </button>
           )}
 

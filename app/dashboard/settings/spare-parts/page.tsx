@@ -57,9 +57,7 @@ export default function BoardTypesManagementPage() {
         try {
           const err = await res.json();
           if (err && err.error) errorMessage = err.error;
-        } catch (e) {
-          // กรณีที่ Response ไม่ได้ส่งกลับมาเป็น JSON
-        }
+        } catch (e) {}
         alert(errorMessage);
       }
     } catch (err) {
@@ -107,13 +105,13 @@ export default function BoardTypesManagementPage() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6 text-black">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6 text-black">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">จัดการประเภทบอร์ดมาตรฐาน (Board Types)</h1>
+        <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">จัดการประเภทบอร์ดมาตรฐาน (Board Types)</h1>
       </div>
 
       {/* ฟอร์มเพิ่ม / แก้ไขประเภทบอร์ด */}
-      <form onSubmit={handleSubmit} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-end">
+      <form onSubmit={handleSubmit} className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row gap-4 items-end">
         
         <div className="w-full md:w-72">
           <label className="block text-xs font-bold mb-1.5 text-gray-700 uppercase tracking-wide">
@@ -122,7 +120,7 @@ export default function BoardTypesManagementPage() {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="border-2 border-gray-200 px-3 py-2.5 rounded-xl w-full bg-white text-gray-900 font-bold focus:border-blue-600 outline-none transition shadow-2xs"
+            className="border-2 border-gray-200 px-3 py-2.5 rounded-xl w-full bg-white text-gray-900 font-bold focus:border-blue-600 outline-none transition shadow-2xs text-sm"
           >
             <option value="อินเวอร์เตอร์">อินเวอร์เตอร์ (Inverter)</option>
             <option value="ออปติไมเซอร์">ออปติไมเซอร์ (Optimizer)</option>
@@ -141,7 +139,7 @@ export default function BoardTypesManagementPage() {
             value={boardTypeName}
             onChange={(e) => setBoardTypeName(e.target.value)}
             placeholder="เช่น WIFI_BOARD, MAIN_BOARD"
-            className="border-2 border-gray-200 px-3.5 py-2.5 rounded-xl w-full bg-white text-gray-900 font-bold focus:border-blue-600 outline-none transition shadow-2xs"
+            className="border-2 border-gray-200 px-3.5 py-2.5 rounded-xl w-full bg-white text-gray-900 font-bold focus:border-blue-600 outline-none transition shadow-2xs text-sm"
             required
           />
         </div>
@@ -151,7 +149,7 @@ export default function BoardTypesManagementPage() {
             <button
               type="button"
               onClick={handleCancelEdit}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl cursor-pointer font-bold text-sm shadow-sm transition"
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2.5 rounded-xl cursor-pointer font-bold text-sm shadow-sm transition flex-1 md:flex-none justify-center"
             >
               ยกเลิก
             </button>
@@ -166,58 +164,91 @@ export default function BoardTypesManagementPage() {
         </div>
       </form>
 
-      {/* ตารางแสดงรายการประเภทบอร์ด */}
-      <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-700 font-black uppercase tracking-wider">
-              <th className="py-4 px-5 text-left">หมวดหมู่อุปกรณ์</th>
-              <th className="py-4 px-5 text-left">ชื่อประเภทบอร์ดมาตรฐาน</th>
-              <th className="py-4 px-5 text-right">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {boardTypes.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="text-center py-12 text-gray-500 font-bold italic">
-                  ยังไม่มีข้อมูลประเภทบอร์ด สามารถพิมพ์เพิ่มจากฟอร์มด้านบนได้เลยครับ
-                </td>
-              </tr>
-            ) : (
-              boardTypes.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50/75 transition">
-                  <td className="py-4 px-5">
-                    <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-black bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs">
-                      {item.category || 'อินเวอร์เตอร์'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-5">
-                    <span className="inline-flex items-center px-3.5 py-1 rounded-xl text-xs font-black bg-blue-50 text-blue-800 border border-blue-100 tracking-wide shadow-2xs">
-                      {item.name}
-                    </span>
-                  </td>
-                  <td className="py-4 px-5 text-right space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => handleEditClick(item)}
-                      className="bg-amber-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-amber-600 cursor-pointer shadow-xs transition"
-                    >
-                      แก้ไข
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item.id)}
-                      className="bg-rose-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-rose-700 cursor-pointer shadow-xs transition"
-                    >
-                      ลบ
-                    </button>
-                  </td>
+      {/* 📱 ส่วนแสดงผลรายการ: แปลงเป็น Card บนมือถือ และเป็น Table บนจอใหญ่ */}
+      {boardTypes.length === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center text-gray-500 font-bold italic shadow-sm">
+          ยังไม่มีข้อมูลประเภทบอร์ด สามารถพิมพ์เพิ่มจากฟอร์มด้านบนได้เลยครับ[cite: 11]
+        </div>
+      ) : (
+        <>
+          {/* มุมมองมือถือ: แสดงเป็น Card แนวตั้ง */}
+          <div className="grid grid-cols-1 gap-3 md:hidden">
+            {boardTypes.map((item) => (
+              <div key={item.id} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-black bg-slate-100 text-slate-800 border border-slate-200">
+                    {item.category || 'อินเวอร์เตอร์'}
+                  </span>
+                  <span className="inline-flex items-center px-3.5 py-1 rounded-xl text-xs font-black bg-blue-50 text-blue-800 border border-blue-100 break-all">
+                    {item.name}
+                  </span>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => handleEditClick(item)}
+                    className="flex-1 bg-amber-500 text-white py-2 rounded-xl text-xs font-bold hover:bg-amber-600 cursor-pointer text-center shadow-xs transition"
+                  >
+                    แก้ไข
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.id)}
+                    className="flex-1 bg-rose-600 text-white py-2 rounded-xl text-xs font-bold hover:bg-rose-700 cursor-pointer text-center shadow-xs transition"
+                  >
+                    ลบ
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* มุมมองจอคอมพิวเตอร์ (Desktop): แสดงเป็น Table ปกติ */}
+          <div className="hidden md:block border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-700 font-black uppercase tracking-wider">
+                  <th className="py-4 px-5 text-left">หมวดหมู่อุปกรณ์</th>
+                  <th className="py-4 px-5 text-left">ชื่อประเภทบอร์ดมาตรฐาน</th>
+                  <th className="py-4 px-5 text-right">จัดการ</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {boardTypes.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50/75 transition">
+                    <td className="py-4 px-5">
+                      <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-black bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs">
+                        {item.category || 'อินเวอร์เตอร์'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-5">
+                      <span className="inline-flex items-center px-3.5 py-1 rounded-xl text-xs font-black bg-blue-50 text-blue-800 border border-blue-100 tracking-wide shadow-2xs">
+                        {item.name}
+                      </span>
+                    </td>
+                    <td className="py-4 px-5 text-right space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditClick(item)}
+                        className="bg-amber-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-amber-600 cursor-pointer shadow-xs transition"
+                      >
+                        แก้ไข
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(item.id)}
+                        className="bg-rose-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold hover:bg-rose-700 cursor-pointer shadow-xs transition"
+                      >
+                        ลบ
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

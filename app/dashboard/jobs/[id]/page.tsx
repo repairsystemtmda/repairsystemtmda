@@ -6,6 +6,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { Wrench, ArrowLeft, CheckCircle2, Layers, Printer, FileSpreadsheet, ArrowRight, Send, GitCommit, PlayCircle, ShieldAlert, ShieldCheck, AlertCircle, PackageCheck, Laptop, User } from 'lucide-react';
 import JobEditForm from './_components/JobEditForm';
+import { JobSubmitButton, JobLinkButton } from './_components/JobActionButton';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -25,7 +26,7 @@ const STATUS_LABELS: Record<string, string> = {
   RETURNED_SHIPPED: 'ส่งมอบเครื่องคืนลูกค้า (จัดส่งขนส่ง)',
   RETURN_BACKUP_AND_DELIVER: 'คืนเครื่องสำรอง + ส่งมอบเครื่องลูกค้า',
   SWAPPED_PERMANENT: 'สลับเปลี่ยนเครื่องสำรองให้ถาวร',
-  CLAIM_NEW_MACHINE: 'เคลมเครื่องใหม่', // 🌟 เพิ่มคำแปลภาษาไทยตรงนี้
+  CLAIM_NEW_MACHINE: 'เคลมเครื่องใหม่',
   CANCELLED: 'ยกเลิกใบงาน',
 };
 
@@ -582,32 +583,44 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
         <div className="flex flex-col gap-3 pt-1">
           {job.status === 'PENDING' && (
             <form action={async () => { 'use server'; await quickUpdateStatus('DIAGNOSE'); }}>
-              <button type="submit" className="w-full sm:w-auto justify-center px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-indigo-400/35">
+              <JobSubmitButton 
+                loadingText="กำลังบันทึก..." 
+                className="w-full sm:w-auto justify-center px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-indigo-400/35"
+              >
                 <PlayCircle className="w-4 h-4 text-indigo-200" /> เริ่มต้นประเมินอาการ <ArrowRight className="w-4 h-4" />
-              </button>
+              </JobSubmitButton>
             </form>
           )}
 
           {job.status === 'DIAGNOSE' && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <form action={async () => { 'use server'; await quickUpdateStatus('WAITING_FOR_APPROVAL'); }} className="w-full sm:w-auto">
-                <button type="submit" className="w-full justify-center px-4 py-3 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-orange-400/35">
+                <JobSubmitButton 
+                  loadingText="กำลังบันทึก..." 
+                  className="w-full justify-center px-4 py-3 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-orange-400/35"
+                >
                   <ShieldAlert className="w-4 h-4 text-orange-200 shrink-0" /> ไม่อยู่ในประกัน (รอลูกค้าอนุมัติ)
-                </button>
+                </JobSubmitButton>
               </form>
               <form action={async () => { 'use server'; await quickUpdateStatus('IN_REPAIR'); }} className="w-full sm:w-auto">
-                <button type="submit" className="w-full justify-center px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-blue-400/35">
+                <JobSubmitButton 
+                  loadingText="กำลังบันทึก..." 
+                  className="w-full justify-center px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-blue-400/35"
+                >
                   <ShieldCheck className="w-4 h-4 text-blue-200 shrink-0" /> อยู่ในประกัน (เริ่มซ่อมได้เลย)
-                </button>
+                </JobSubmitButton>
               </form>
             </div>
           )}
 
           {job.status === 'WAITING_FOR_APPROVAL' && (
             <form action={async () => { 'use server'; await quickUpdateStatus('IN_REPAIR'); }}>
-              <button type="submit" className="w-full sm:w-auto justify-center px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-blue-400/35">
+              <JobSubmitButton 
+                loadingText="กำลังบันทึก..." 
+                className="w-full sm:w-auto justify-center px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-blue-400/35"
+              >
                 🛠 ลูกค้าอนุมัติราคาแล้ว เริ่มซ่อมเลย <ArrowRight className="w-4 h-4" />
-              </button>
+              </JobSubmitButton>
             </form>
           )}
 
@@ -630,12 +643,13 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
                   </div>
                 )}
 
-                <Link
+                <JobLinkButton
                   href={`/dashboard/jobs/${id}/restock`} 
+                  loadingText="กำลังโหลด..."
                   className="w-full sm:w-auto justify-center px-4 py-3 font-bold text-xs sm:text-sm rounded-xl shadow-lg transition flex items-center gap-2 no-underline bg-amber-500 hover:bg-amber-600 text-white ring-4 ring-amber-400/20 shrink-0"
                 >
                   <Layers className="w-4 h-4" /> ⚡ เบิกอะไหล่และแนบหลักฐาน {!hasSpareParts && '(จำเป็น)'}
-                </Link>
+                </JobLinkButton>
               </div>
 
               <div className="w-full flex flex-col gap-2.5 pt-1">
@@ -644,27 +658,34 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-wrap">
                   {!job.backupDeviceId && (
-                    <Link
+                    <JobLinkButton
                       href={`/dashboard/jobs/${id}?showSwapModal=true`}
+                      loadingText="กำลังเปิดหน้าต่าง..."
                       className="w-full sm:w-auto justify-center px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center gap-2 no-underline border border-indigo-400/30"
                     >
                       🔄 ให้ยืมเครื่องสำรองระหว่างซ่อม
-                    </Link>
+                    </JobLinkButton>
                   )}
 
                   {hasSpareParts && (
                     <form action={async () => { 'use server'; await quickUpdateStatus('COMPLETED'); }} className="w-full sm:w-auto">
-                      <button type="submit" className="w-full sm:w-auto justify-center px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center gap-2 cursor-pointer border border-emerald-400/30">
+                      <JobSubmitButton 
+                        loadingText="กำลังบันทึก..." 
+                        className="w-full sm:w-auto justify-center px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center gap-2 cursor-pointer border border-emerald-400/30"
+                      >
                         ✅ ซ่อมเครื่องเสร็จสิ้น (COMPLETED)
-                      </button>
+                      </JobSubmitButton>
                     </form>
                   )}
 
                   {isDeyeOrTmda && (
                     <form action={async () => { 'use server'; await quickUpdateStatus('WAITING_DEYE_SEND'); }} className="w-full sm:w-auto">
-                      <button type="submit" className="w-full sm:w-auto justify-center px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center gap-2 cursor-pointer border border-purple-400/30">
+                      <JobSubmitButton 
+                        loadingText="กำลังบันทึก..." 
+                        className="w-full sm:w-auto justify-center px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center gap-2 cursor-pointer border border-purple-400/30"
+                      >
                         <Send className="w-4 h-4" /> รอส่ง Deye
-                      </button>
+                      </JobSubmitButton>
                     </form>
                   )}
                 </div>
@@ -674,17 +695,23 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
 
           {job.status === 'WAITING_DEYE_SEND' && (
             <form action={async () => { 'use server'; await quickUpdateStatus('SENT_TO_DEYE'); }}>
-              <button type="submit" className="w-full sm:w-auto justify-center px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-purple-400/35">
+              <JobSubmitButton 
+                loadingText="กำลังบันทึก..." 
+                className="w-full sm:w-auto justify-center px-5 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-purple-400/35"
+              >
                 🚚 ส่งเครื่องไป Deye แล้ว <ArrowRight className="w-4 h-4" />
-              </button>
+              </JobSubmitButton>
             </form>
           )}
 
           {job.status === 'SENT_TO_DEYE' && (
             <form action={async () => { 'use server'; await quickUpdateStatus('COMPLETED_BY_DEYE'); }}>
-              <button type="submit" className="w-full sm:w-auto justify-center px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-purple-400/35">
+              <JobSubmitButton 
+                loadingText="กำลังบันทึก..." 
+                className="w-full sm:w-auto justify-center px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md transition flex items-center gap-2 cursor-pointer border border-purple-400/35"
+              >
                 ✅ Deye ซ่อมเสร็จส่งกลับมาแล้ว (COMPLETED_BY_DEYE) <CheckCircle2 className="w-4 h-4" />
-              </button>
+              </JobSubmitButton>
             </form>
           )}
 
@@ -697,27 +724,39 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
               {job.backupDeviceId ? (
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                   <form action={async () => { 'use server'; await quickUpdateStatus('SWAPPED_PERMANENT'); }} className="w-full sm:w-auto">
-                    <button type="submit" className="w-full sm:w-auto justify-center px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow transition cursor-pointer flex items-center gap-2 border border-purple-400/30">
+                    <JobSubmitButton 
+                      loadingText="กำลังบันทึก..." 
+                      className="w-full sm:w-auto justify-center px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow transition cursor-pointer flex items-center gap-2 border border-purple-400/30"
+                    >
                       🔄 ทางเลือก 1: เปลี่ยนเครื่องสำรองให้ถาวร
-                    </button>
+                    </JobSubmitButton>
                   </form>
                   <form action={async () => { 'use server'; await quickUpdateStatus('RETURN_BACKUP_AND_DELIVER'); }} className="w-full sm:w-auto">
-                    <button type="submit" className="w-full sm:w-auto justify-center px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow transition cursor-pointer flex items-center gap-2 border border-purple-400/30">
+                    <JobSubmitButton 
+                      loadingText="กำลังบันทึก..." 
+                      className="w-full sm:w-auto justify-center px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow transition cursor-pointer flex items-center gap-2 border border-purple-400/30"
+                    >
                       👤 ทางเลือก 2: คืนเครื่องสำรอง + ส่งมอบเครื่องลูกค้า
-                    </button>
+                    </JobSubmitButton>
                   </form>
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                   <form action={async () => { 'use server'; await quickUpdateStatus('RETURNED_CUSTOMER_PICKUP'); }} className="w-full sm:w-auto">
-                    <button type="submit" className="w-full sm:w-auto justify-center px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow transition cursor-pointer flex items-center gap-2 border border-purple-400/30">
+                    <JobSubmitButton 
+                      loadingText="กำลังบันทึก..." 
+                      className="w-full sm:w-auto justify-center px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow transition cursor-pointer flex items-center gap-2 border border-purple-400/30"
+                    >
                       🏢 ลูกค้ามารับเครื่องคืนเองที่ร้าน
-                    </button>
+                    </JobSubmitButton>
                   </form>
                   <form action={async () => { 'use server'; await quickUpdateStatus('RETURNED_SHIPPED'); }} className="w-full sm:w-auto">
-                    <button type="submit" className="w-full sm:w-auto justify-center px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow transition cursor-pointer flex items-center gap-2 border border-purple-400/30">
+                    <JobSubmitButton 
+                      loadingText="กำลังบันทึก..." 
+                      className="w-full sm:w-auto justify-center px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow transition cursor-pointer flex items-center gap-2 border border-purple-400/30"
+                    >
                       🚚 จัดส่งเครื่องคืนลูกค้าผ่านระบบขนส่ง
-                    </button>
+                    </JobSubmitButton>
                   </form>
                 </div>
               )}
@@ -739,9 +778,12 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
           {job.status !== 'CANCELLED' && !isFinalClosed && (
             <div className="w-full flex justify-end pt-1">
               <form action={async () => { 'use server'; await quickUpdateStatus('CANCELLED'); }}>
-                <button type="submit" className="w-full sm:w-auto justify-center px-4 py-2.5 bg-red-950/50 hover:bg-red-900/60 text-red-300 border border-red-800/40 font-semibold rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5">
+                <JobSubmitButton 
+                  loadingText="กำลังบันทึก..." 
+                  className="w-full sm:w-auto justify-center px-4 py-2.5 bg-red-950/50 hover:bg-red-900/60 text-red-300 border border-red-800/40 font-semibold rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5"
+                >
                   ❌ ยกเลิกใบงาน
-                </button>
+                </JobSubmitButton>
               </form>
             </div>
           )}
@@ -793,13 +835,13 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
                 >
                   ยกเลิก
                 </Link>
-                <button
-                  type="submit"
+                <JobSubmitButton
+                  loadingText="กำลังบันทึก..."
                   disabled={backupDevices.length === 0}
                   className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-sm rounded-xl shadow transition cursor-pointer flex items-center gap-2"
                 >
                   ยืนยันให้ยืมเครื่องสำรอง
-                </button>
+                </JobSubmitButton>
               </div>
             </form>
           </div>

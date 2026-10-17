@@ -59,10 +59,17 @@ export default async function SparePartDetailPage({
     notFound();
   }
 
-  // ดึงรายการประเภทบอร์ดมาตรฐานทั้งหมดที่ Admin เคยเพิ่มไว้ในระบบ (จากฐานข้อมูล)
-  const boardTypesFromDb = await (prisma as any).standardBoardType?.findMany
-    ? await (prisma as any).standardBoardType.findMany({ orderBy: { name: 'asc' } })
-    : [];
+  // ดึงรายการประเภทบอร์ดมาตรฐานทั้งหมดที่ Admin เคยเพิ่มไว้ในระบบ (รองรับทั้งตาราง standardBoardType หรือ boardType ตามโครงสร้างฐานข้อมูล)
+  let boardTypesFromDb: any[] = [];
+  try {
+    if ((prisma as any).standardBoardType) {
+      boardTypesFromDb = await (prisma as any).standardBoardType.findMany({ orderBy: { name: 'asc' } });
+    } else if ((prisma as any).boardType) {
+      boardTypesFromDb = await (prisma as any).boardType.findMany({ orderBy: { name: 'asc' } });
+    }
+  } catch (e) {
+    boardTypesFromDb = [];
+  }
 
   // ดึงประวัติการทำรายการ (ดึงเฉพาะเมื่อเป็น ADMIN)
   const logs = isAdmin ? await prisma.stockLog.findMany({
@@ -85,11 +92,13 @@ export default async function SparePartDetailPage({
     const boardModelCode = formData.get('boardModelCode') as string;
     const category = formData.get('category') as string;
     
-    // จัดการค่าประเภทบอร์ด (รองรับกรณีพิมพ์เพิ่มเองในช่องอื่นๆ)
+    // จัดการค่าประเภทบอร์ด (รองรับกรณีเลือกอื่นๆ แล้วพิมพ์เพิ่มเอง)
     let boardType = formData.get('boardType') as string;
     const customBoardType = formData.get('customBoardType') as string;
     if (boardType === 'OTHER' && customBoardType) {
       boardType = customBoardType.trim();
+    } else if (boardType === '' || boardType === '-- ไม่ระบุ --') {
+      boardType = '';
     }
 
     const model = formData.get('model') as string;
@@ -276,7 +285,7 @@ export default async function SparePartDetailPage({
           </div>
 
           <div>
-            <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2 flex items-center gap-1.5">
+            <label className="block text-xs sm:text-xs font-bold text-gray-700 mb-1.5 sm:mb-2 flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-blue-600" /> หมวดหมู่หลัก (5 รายการ)
             </label>
             {isEditing ? (
@@ -303,7 +312,7 @@ export default async function SparePartDetailPage({
 
           <div>
             <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2 flex items-center gap-1.5">
-              <Boxes className="w-4 h-4 text-blue-600" /> ประเภทบอร์ด
+              <Boxes className="w-4 h-4 text-blue-600" /> ประเภทบอร์ดมาตรฐาน (Board Type)
             </label>
             {isEditing ? (
               <div className="space-y-2">
@@ -315,7 +324,7 @@ export default async function SparePartDetailPage({
                   <option value="">-- ไม่ระบุ / ไม่มีประเภทบอร์ด --</option>
                   {boardTypesFromDb.map((bt: any) => (
                     <option key={bt.id || bt.name} value={bt.name}>
-                      {bt.name} {bt.category ? `(${bt.category})` : ''}
+                      {bt.name}
                     </option>
                   ))}
                   <option value="OTHER">➕ อื่นๆ (ระบุเพิ่มเอง)...</option>
@@ -323,7 +332,7 @@ export default async function SparePartDetailPage({
                 <input
                   type="text"
                   name="customBoardType"
-                  placeholder="พิมพ์ชื่อประเภทบอร์ดอื่นๆ..."
+                  placeholder="กรอกชื่อประเภทบอร์ดอื่นๆ..."
                   className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 outline-none focus:bg-white focus:border-blue-500"
                 />
               </div>
