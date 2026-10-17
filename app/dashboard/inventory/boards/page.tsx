@@ -144,9 +144,6 @@ export default async function InventoryPage({
           {isAdmin && (
             <Link
               href={`/dashboard/inventory/boards?query=${query}&category=${category}&boardType=${boardType}&filter=low`}
-              onClick={(e) => {
-                if (filter === 'low') e.preventDefault();
-              }}
               className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl shadow-sm transition ${
                 filter === 'low' 
                   ? 'bg-red-600 text-white' 
