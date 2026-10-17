@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Search, X, ChevronDown } from "lucide-react";
 
 interface BoardTypeItem {
@@ -21,14 +20,11 @@ export default function InventoryFilterForm({
   initialBoardType: string;
   initialFilter: string;
 }) {
-  const router = useRouter();
-
   const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState(initialCategory);
   const [boardType, setBoardType] = useState(initialBoardType);
   const [boardTypesData, setBoardTypesData] = useState<BoardTypeItem[]>([]);
 
-  // 📌 ดึงข้อมูลประเภทบอร์ดจากตารางกลางเมื่อโหลดคอมโพเนนต์[cite: 8]
   useEffect(() => {
     const fetchBoardTypes = async () => {
       try {
@@ -44,32 +40,24 @@ export default function InventoryFilterForm({
     fetchBoardTypes();
   }, []);
 
-  // ฟังก์ชันจัดการเมื่อเปลี่ยนหมวดหมู่หลัก[cite: 8]
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newCategory = e.target.value;
     setCategory(newCategory);
-    setBoardType(""); // รีเซ็ตประเภทบอร์ดเมื่อเปลี่ยนหมวดหมู่[cite: 8]
+    setBoardType("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 🌟 ปรับให้เป็นการเคลียร์ค่าแล้วปล่อยให้ฟอร์มรีโหลดหน้าใหม่ผ่าน method="GET"
+  const handleClear = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    const params = new URLSearchParams();
-    if (query) params.set("query", query);
-    if (category) params.set("category", category);
-    if (boardType) params.set("boardType", boardType);
-    if (initialFilter) params.set("filter", initialFilter);
-
-    router.push(`/dashboard/inventory/boards?${params.toString()}`);
-  };
-
-  const handleClear = () => {
     setQuery("");
     setCategory("");
     setBoardType("");
-    router.push(`/dashboard/inventory/boards${initialFilter ? `?filter=${initialFilter}` : ""}`);
+    
+    // เปลี่ยนเส้นทางไปหน้าเปล่าเพื่อให้เกิดการโหลดใหม่และแสดง loading.tsx
+    const targetUrl = `/dashboard/inventory/boards${initialFilter ? `?filter=${initialFilter}` : ""}`;
+    window.location.href = targetUrl;
   };
 
-  // 📌 ระบบกรองประเภทบอร์ดให้สัมพันธ์กับหมวดหมู่ที่เลือกอย่างแม่นยำ[cite: 8]
   const filteredBoardTypes = boardTypesData.filter(item => {
     if (!category) return true;
     if (!item.category) return true;
@@ -77,17 +65,14 @@ export default function InventoryFilterForm({
     const dbCat = item.category.trim().toLowerCase();
     const selCat = category.trim().toLowerCase();
 
-    // 1. ตรงกันโดยตรง[cite: 8]
     if (dbCat === selCat) return true;
 
-    // 2. เช็คกลุ่มไมโครอินเวอร์เตอร์ (Micro Inverter) ก่อนเสมอเพื่อไม่ให้ชนกับอินเวอร์เตอร์ทั่วไป[cite: 8]
     const isDbMicro = dbCat.includes("ไมโคร") || dbCat.includes("micro");
     const isSelMicro = selCat.includes("ไมโคร") || selCat.includes("micro");
     if (isDbMicro || isSelMicro) {
       return isDbMicro && isSelMicro;
     }
 
-    // 3. เช็คกลุ่มอินเวอร์เตอร์ทั่วไป (Inverter)[cite: 8]
     const isDbInv = dbCat.includes("อินเวอร์เตอร์") || dbCat.includes("inverter");
     const isSelInv = selCat.includes("อินเวอร์เตอร์") || selCat.includes("inverter");
     const isDbPump = dbCat.includes("ปั๊มน้ำ") || dbCat.includes("pump");
@@ -95,15 +80,12 @@ export default function InventoryFilterForm({
 
     if (isDbInv && isSelInv && (!isDbPump && !isSelPump)) return true;
 
-    // 4. เช็คกลุ่มออปติไมเซอร์ (Optimizer)[cite: 8]
     if ((dbCat.includes("ออปติไมเซอร์") || dbCat.includes("optimizer")) && 
         (selCat.includes("ออปติไมเซอร์") || selCat.includes("optimizer"))) return true;
 
-    // 5. เช็คกลุ่มแบตเตอรี่ (Battery)[cite: 8]
     if ((dbCat.includes("แบตเตอรี่") || dbCat.includes("battery")) && 
         (selCat.includes("แบตเตอรี่") || selCat.includes("battery"))) return true;
 
-    // 6. เช็คกลุ่มอินเวอร์เตอร์ปั๊มน้ำ (Solar Pump)[cite: 8]
     if ((dbCat.includes("ปั๊มน้ำ") || dbCat.includes("pump")) && 
         (selCat.includes("ปั๊มน้ำ") || selCat.includes("pump"))) return true;
 
@@ -111,11 +93,15 @@ export default function InventoryFilterForm({
   });
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col lg:flex-row items-center gap-3">
+    // 🌟 ใช้ method="GET" และ action แบบปกติ เพื่อให้ Next.js บังคับโหลดหน้าใหม่และแสดง loading.tsx ทันที
+    <form method="GET" action="/dashboard/inventory/boards" className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col lg:flex-row items-center gap-3">
+      {initialFilter && <input type="hidden" name="filter" value={initialFilter} />}
+      
       <div className="relative flex-1 w-full">
         <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-500" />
         <input
           type="text"
+          name="query"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="ค้นหาด้วยรหัสรุ่นบอร์ด, ชื่อบอร์ด หรือรุ่นเครื่องที่รองรับ..."
@@ -125,9 +111,9 @@ export default function InventoryFilterForm({
       
       <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
         
-        {/* ช่องที่ 1: กรองหมวดหมู่อุปกรณ์หลัก */}
         <div className="relative w-full sm:w-56">
           <select
+            name="category"
             value={category}
             onChange={handleCategoryChange}
             className="w-full px-4 py-2.5 appearance-none bg-gray-50 border border-gray-200 rounded-xl text-base sm:text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition text-gray-900 cursor-pointer"
@@ -144,9 +130,9 @@ export default function InventoryFilterForm({
           </div>
         </div>
 
-        {/* ช่องที่ 2: กรองประเภทบอร์ด (ดึงข้อมูลแบบไดนามิกจากฐานข้อมูล) */}
         <div className="relative w-full sm:w-64">
           <select
+            name="boardType"
             value={boardType}
             onChange={(e) => setBoardType(e.target.value)}
             className="w-full px-4 py-2.5 appearance-none bg-gray-50 border border-gray-200 rounded-xl text-base sm:text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition text-gray-900 cursor-pointer"

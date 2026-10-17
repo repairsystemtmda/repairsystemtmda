@@ -17,8 +17,9 @@ import {
   X,
   Boxes
 } from 'lucide-react';
+import { SaveEditButton, AdjustStockButton } from './_components/SubmitButtons';
 
-// รายการประเภทบอร์ดสำหรับ Inverter[cite: 7]
+// รายการประเภทบอร์ดสำหรับ Inverter
 const INVERTER_BOARD_TYPES = [
   { value: 'MAIN_BOARD', label: 'MAIN_BOARD (เมนบอร์ด)' },
   { value: 'AC_BOARD', label: 'AC_BOARD (บอร์ด AC)' },
@@ -53,7 +54,7 @@ export default async function SparePartDetailPage({
   const isStockSuccess = resolvedSearchParams?.stockSuccess === 'true';
   const isEditing = resolvedSearchParams?.edit === 'true';
 
-  // ตรวจสอบ Session และสิทธิ์ผู้ใช้งานปัจจุบัน[cite: 7]
+  // ตรวจสอบ Session และสิทธิ์ผู้ใช้งานปัจจุบัน
   const session = await getServerSession();
   const currentUserEmail = session?.user?.email;
   
@@ -63,7 +64,7 @@ export default async function SparePartDetailPage({
 
   const isAdmin = currentUser?.role === 'ADMIN';
 
-  // ดึงข้อมูลอะไหล่จากฐานข้อมูล[cite: 7]
+  // ดึงข้อมูลอะไหล่จากฐานข้อมูล
   const part = await prisma.sparePart.findUnique({
     where: { id },
   });
@@ -72,14 +73,14 @@ export default async function SparePartDetailPage({
     notFound();
   }
 
-  // ดึงประวัติการทำรายการ (ดึงเฉพาะเมื่อเป็น ADMIN)[cite: 7]
+  // ดึงประวัติการทำรายการ (ดึงเฉพาะเมื่อเป็น ADMIN)
   const logs = isAdmin ? await prisma.stockLog.findMany({
     where: { sparePartId: id },
     orderBy: { createdAt: 'desc' },
     take: 10,
   }) : [];
 
-  // Server Action สำหรับอัปเดตข้อมูลรายละเอียดอะไหล่ทั่วไป (เฉพาะ Admin)[cite: 7]
+  // Server Action สำหรับอัปเดตข้อมูลรายละเอียดอะไหล่ทั่วไป (เฉพาะ Admin)
   async function updateSparePart(formData: FormData) {
     'use server';
     const sessionCheck = await getServerSession();
@@ -122,7 +123,7 @@ export default async function SparePartDetailPage({
     redirect(`/dashboard/inventory/boards/${id}?success=true`);
   }
 
-  // Server Action สำหรับแอดมินปรับเพิ่ม/ลดสต็อกโดยตรง พร้อมบันทึก Log (เฉพาะ Admin)[cite: 7]
+  // Server Action สำหรับแอดมินปรับเพิ่ม/ลดสต็อกโดยตรง พร้อมบันทึก Log (เฉพาะ Admin)
   async function adjustStock(formData: FormData) {
     'use server';
     const sessionCheck = await getServerSession();
@@ -173,7 +174,7 @@ export default async function SparePartDetailPage({
     redirect(`/dashboard/inventory/boards/${id}?stockSuccess=true`);
   }
 
-  // ค้นหา Label สำหรับแสดงผลในโหมดดูข้อมูลปกติ (Read-only)[cite: 7]
+  // ค้นหา Label สำหรับแสดงผลในโหมดดูข้อมูลปกติ (Read-only)
   const currentBoardTypeObj = INVERTER_BOARD_TYPES.find(
     (t) => t.value === (part as any).boardType
   );
@@ -184,7 +185,7 @@ export default async function SparePartDetailPage({
   return (
     <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-4 sm:space-y-6 pb-24">
       
-      {/* ส่วนหัว และปุ่มย้อนกลับ[cite: 7] */}
+      {/* ส่วนหัว และปุ่มย้อนกลับ */}
       <div className="flex items-center justify-between gap-3 bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
         <div className="flex items-center gap-2.5 min-w-0">
           <Link
@@ -203,7 +204,7 @@ export default async function SparePartDetailPage({
         </div>
       </div>
 
-      {/* แถบแจ้งเตือนเมื่อบันทึกสำเร็จ[cite: 7] */}
+      {/* แถบแจ้งเตือนเมื่อบันทึกสำเร็จ */}
       {isSuccess && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-2xl flex items-center gap-3 shadow-sm text-xs sm:text-sm font-semibold">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
@@ -218,7 +219,7 @@ export default async function SparePartDetailPage({
         </div>
       )}
 
-      {/* การ์ดแสดงข้อมูลทั่วไป[cite: 7] */}
+      {/* การ์ดแสดงข้อมูลทั่วไป */}
       <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-sm border border-gray-200 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 pb-4 gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -234,7 +235,7 @@ export default async function SparePartDetailPage({
             </span>
           </div>
 
-          {/* ปุ่มสลับโหมด แก้ไขข้อมูล (แสดงเฉพาะ ADMIN เท่านั้น)[cite: 7] */}
+          {/* ปุ่มสลับโหมด แก้ไขข้อมูล (แสดงเฉพาะ ADMIN เท่านั้น) */}
           <div>
             {isAdmin && (
               isEditing ? (
@@ -256,7 +257,7 @@ export default async function SparePartDetailPage({
           </div>
         </div>
 
-        {/* ฟอร์ม / แสดงข้อมูล[cite: 7] */}
+        {/* ฟอร์ม / แสดงข้อมูล */}
         <form action={updateSparePart} className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div>
             <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2 flex items-center gap-1.5">
@@ -298,7 +299,6 @@ export default async function SparePartDetailPage({
               <Layers className="w-4 h-4 text-blue-600" /> หมวดหมู่
             </label>
             {isEditing ? (
-              // เพิ่ม appearance-none และ text-base เพื่อแก้ปัญหาช่องดรอปดาวน์เล็กบน iOS
               <select
                 name="category"
                 defaultValue={part.category || 'Inverter'}
@@ -323,7 +323,6 @@ export default async function SparePartDetailPage({
               <Boxes className="w-4 h-4 text-blue-600" /> ประเภทบอร์ด
             </label>
             {isEditing ? (
-              // เพิ่ม appearance-none และ text-base เพื่อแก้ปัญหาช่องดรอปดาวน์เล็กบน iOS
               <select
                 name="boardType"
                 defaultValue={(part as any).boardType || ''}
@@ -400,7 +399,7 @@ export default async function SparePartDetailPage({
 
           <div>
             <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
-              จำนวนคงเหลือปัจจุบันในคลัง[cite: 7]
+              จำนวนคงเหลือปัจจุบันในคลัง
             </label>
             <div className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-xs sm:text-sm font-extrabold text-emerald-700 flex items-center justify-between">
               <span>{part.stock} ชิ้น</span>
@@ -408,21 +407,16 @@ export default async function SparePartDetailPage({
             </div>
           </div>
 
-          {/* ปุ่มบันทึกข้อมูลทั่วไป[cite: 7] */}
+          {/* 🌟 เรียกใช้ SaveEditButton ที่มี Inline Loading */}
           {isAdmin && isEditing && (
             <div className="md:col-span-2 flex justify-end pt-2">
-              <button
-                type="submit"
-                className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-2"
-              >
-                บันทึกการแก้ไขข้อมูล
-              </button>
+              <SaveEditButton />
             </div>
           )}
         </form>
       </div>
 
-      {/* ส่วนสำหรับ Admin ปรับเพิ่ม/ลดสต็อก (แสดงเฉพาะ ADMIN เท่านั้น)[cite: 7] */}
+      {/* ส่วนสำหรับ Admin ปรับเพิ่ม/ลดสต็อก (แสดงเฉพาะ ADMIN เท่านั้น) */}
       {isAdmin && (
         <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-sm border border-gray-200 space-y-4">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
@@ -436,7 +430,6 @@ export default async function SparePartDetailPage({
                 <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
                   ประเภทการปรับสต็อก *
                 </label>
-                {/* เพิ่ม appearance-none และ text-base เพื่อแก้ปัญหาช่องดรอปดาวน์เล็กบน iOS */}
                 <select
                   name="actionType"
                   required
@@ -449,7 +442,7 @@ export default async function SparePartDetailPage({
 
               <div>
                 <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
-                  จำนวน (ชิ้น) *[cite: 7]
+                  จำนวน (ชิ้น) *
                 </label>
                 <input
                   type="number"
@@ -464,7 +457,7 @@ export default async function SparePartDetailPage({
 
             <div>
               <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2">
-                หมายเหตุ / เหตุผลในการปรับ[cite: 7]
+                หมายเหตุ / เหตุผลในการปรับ
               </label>
               <div className="flex flex-col sm:flex-row gap-2.5">
                 <input
@@ -473,19 +466,15 @@ export default async function SparePartDetailPage({
                   placeholder="เช่น ตรวจนับสต็อกประจำเดือน..."
                   className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm text-gray-900 focus:ring-2 focus:ring-slate-500/20 outline-none transition shadow-xs"
                 />
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition flex-shrink-0"
-                >
-                  ยืนยันการปรับสต็อก
-                </button>
+                {/* 🌟 เรียกใช้ AdjustStockButton ที่มี Inline Loading */}
+                <AdjustStockButton />
               </div>
             </div>
           </form>
         </div>
       )}
 
-      {/* ประวัติการเบิก-จ่าย ล่าสุด (แสดงเฉพาะ ADMIN เท่านั้น)[cite: 7] */}
+      {/* ประวัติการเบิก-จ่าย ล่าสุด (แสดงเฉพาะ ADMIN เท่านั้น) */}
       {isAdmin && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden space-y-3">
           <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center gap-2">
@@ -493,7 +482,7 @@ export default async function SparePartDetailPage({
             <h2 className="text-base sm:text-lg font-bold text-gray-900">ประวัติการเคลื่อนไหวล่าสุด</h2>
           </div>
           
-          {/* 📱 มุมมองมือถือ: แสดงผลแบบ Card แนวตั้ง[cite: 7] */}
+          {/* 📱 มุมมองมือถือ: แสดงผลแบบ Card แนวตั้ง */}
           <div className="grid grid-cols-1 gap-3 p-4 sm:hidden">
             {logs.length > 0 ? (
               logs.map((log) => (
@@ -523,7 +512,7 @@ export default async function SparePartDetailPage({
             )}
           </div>
 
-          {/* 💻 มุมมองคอมพิวเตอร์ (Desktop): แสดงผลเป็นตาราง[cite: 7] */}
+          {/* 💻 มุมมองคอมพิวเตอร์ (Desktop): แสดงผลเป็นตาราง */}
           <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>

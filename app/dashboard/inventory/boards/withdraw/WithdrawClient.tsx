@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Layers, Package, Search, X, Upload, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Layers, Package, Search, X, Upload, Image as ImageIcon, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface SparePart {
   id: string;
@@ -665,10 +665,23 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
             <button
               type="submit"
               disabled={loading}
-              className="py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white font-black text-xs sm:text-sm rounded-xl shadow-sm transition flex items-center gap-1.5 justify-center text-center cursor-pointer"
+              className={`py-2.5 rounded-xl font-black text-xs sm:text-sm text-white shadow-sm transition flex items-center gap-1.5 justify-center text-center ${
+                loading
+                  ? 'bg-amber-300 cursor-not-allowed opacity-80'
+                  : 'bg-amber-500 hover:bg-amber-600 active:scale-95 cursor-pointer'
+              }`}
             >
-              <Package className="w-4 h-4 font-bold shrink-0" /> 
-              <span className="truncate">{loading ? 'กำลังบันทึก...' : 'ยืนยันการเบิกอะไหล่'}</span>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white shrink-0" />
+                  <span className="truncate">กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <Package className="w-4 h-4 font-bold shrink-0" /> 
+                  <span className="truncate">ยืนยันการเบิกอะไหล่</span>
+                </>
+              )}
             </button>
           </div>
 

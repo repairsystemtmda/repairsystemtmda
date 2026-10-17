@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, RotateCcw, Search, CheckCircle2, Building2, Wrench } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Search, CheckCircle2, Building2, Wrench, Loader2 } from 'lucide-react';
 
 interface SparePart {
   id: string;
@@ -491,10 +491,23 @@ export default function JobRestockClient({ spareParts = [], jobs = [], actionHan
             <button
               type="submit"
               disabled={loading}
-              className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-55 text-white font-black text-xs sm:text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-1.5"
+              className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm text-white transition shadow-sm flex items-center justify-center gap-1.5 ${
+                loading
+                  ? 'bg-emerald-400 cursor-not-allowed opacity-80'
+                  : 'bg-emerald-600 hover:bg-emerald-700 active:scale-95 cursor-pointer'
+              }`}
             >
-              <CheckCircle2 className="w-4 h-4 font-bold" />
-              {loading ? 'กำลังบันทึก...' : 'ยืนยันคืนเข้าคลัง'}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 font-bold" />
+                  <span>ยืนยันคืนเข้าคลัง</span>
+                </>
+              )}
             </button>
           </div>
 

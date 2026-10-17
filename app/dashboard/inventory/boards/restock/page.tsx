@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Search, PlusCircle, AlertTriangle, CheckCircle2, Package, RefreshCw, Edit3 } from "lucide-react";
+import { ArrowLeft, Search, PlusCircle, AlertTriangle, CheckCircle2, Package, RefreshCw, Edit3, Loader2 } from "lucide-react";
 
 interface PartData {
   boardModelCode: string;
@@ -296,10 +296,21 @@ export default function RestockPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-base rounded-xl shadow-md cursor-pointer transition"
+                className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl shadow-md transition ${
+                  loading ? "bg-blue-400 cursor-not-allowed opacity-80" : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                } text-white font-extrabold text-base`}
               >
-                <Search className="w-5 h-5" />
-                <span>{loading ? "กำลังตรวจสอบระบบ..." : "ตรวจสอบรหัส"}</span>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>กำลังตรวจสอบระบบ...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-5 h-5" />
+                    <span>ตรวจสอบรหัส</span>
+                  </>
+                )}
               </button>
             </form>
           </div>
@@ -343,10 +354,21 @@ export default function RestockPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-base rounded-xl shadow-md cursor-pointer transition"
+              className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl shadow-md transition ${
+                loading ? "bg-amber-400 cursor-not-allowed opacity-80" : "bg-amber-600 hover:bg-amber-700 cursor-pointer"
+              } text-white font-extrabold text-base`}
             >
-              <PlusCircle className="w-5 h-5" />
-              <span>{loading ? "กำลังบันทึก..." : "ยืนยันเติมสต็อกเข้าคลัง"}</span>
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="w-5 h-5" />
+                  <span>ยืนยันเติมสต็อกเข้าคลัง</span>
+                </>
+              )}
             </button>
           </form>
         )}
@@ -516,10 +538,21 @@ export default function RestockPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-base rounded-xl shadow-md cursor-pointer mt-4 transition"
+              className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl shadow-md mt-4 transition ${
+                loading ? "bg-blue-400 cursor-not-allowed opacity-80" : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
+              } text-white font-extrabold text-base`}
             >
-              <PlusCircle className="w-5 h-5" />
-              <span>{loading ? "กำลังบันทึก..." : "บันทึกข้อมูลลงคลัง"}</span>
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="w-5 h-5" />
+                  <span>บันทึกข้อมูลลงคลัง</span>
+                </>
+              )}
             </button>
           </form>
         )}
