@@ -362,6 +362,19 @@ function JobsContent() {
   const isAdmin = userRole === 'ADMIN';
   const isManager = userRole === 'MANAGER';
 
+  if (loading) {
+    return (
+      <div className="min-h-[70vh] w-full flex flex-col items-center justify-center space-y-3">
+        <div className="relative w-12 h-12 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
+          <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+          <Loader2 className="w-5 h-5 text-blue-600 animate-pulse" />
+        </div>
+        <p className="text-xs sm:text-sm font-bold text-gray-600 animate-pulse">กำลังโหลด...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-4 sm:space-y-6">
       <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full">
@@ -470,16 +483,7 @@ function JobsContent() {
       </div>
 
       <div className="w-full space-y-4">
-        {loading ? (
-          <div className="min-h-[50vh] w-full flex flex-col items-center justify-center space-y-3 bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-            <div className="relative w-12 h-12 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
-              <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
-              <Loader2 className="w-5 h-5 text-blue-600 animate-pulse" />
-            </div>
-            <p className="text-xs sm:text-sm font-bold text-gray-600 animate-pulse">กำลังโหลด...</p>
-          </div>
-        ) : filteredJobs.length > 0 ? (
+        {filteredJobs.length > 0 ? (
           <>
             <div className="grid grid-cols-1 gap-3 md:hidden">
               {currentJobs.map((job) => {
