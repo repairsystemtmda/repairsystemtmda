@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { Package, PlusCircle, MinusCircle, RotateCcw, History, Eye, AlertTriangle, Layers, MapPin, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { Package, PlusCircle, MinusCircle, RotateCcw, History, Eye, AlertTriangle, Layers, MapPin, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import DeleteButton from './_components/DeleteButton';
 import InventoryFilterForm from './_components/InventoryFilterForm';
 
@@ -153,11 +153,7 @@ export default async function InventoryPage({
                   : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200'
               }`}
             >
-              {filter === 'low' ? (
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              )}
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" /> 
               <span>อะไหล่เหลือน้อย ({lowStockTotal})</span>
             </Link>
           )}
