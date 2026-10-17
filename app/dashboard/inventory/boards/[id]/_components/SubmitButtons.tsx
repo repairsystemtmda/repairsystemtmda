@@ -1,24 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { Loader2, Save, CheckCircle2, Edit3, X } from "lucide-react";
 
-// 🌟 ปุ่มสลับโหมด "แก้ไขข้อมูล" พร้อมสถานะกำลังโหลดที่ถูกต้อง
+// 🌟 ปุ่มสลับโหมด "แก้ไขข้อมูล" แบบเคลียร์สถานะอัตโนมัติเมื่อ URL เปลี่ยน
 export function EditModeToggleButton({ partId, isEditing }: { partId: string; isEditing: boolean }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+
+  // เมื่อ URL หรือสถานะ isEditing เปลี่ยน ให้รีเซ็ตสถานะ loading กลับเป็นปกติทันที
+  useEffect(() => {
+    setLoading(false);
+  }, [searchParams, isEditing]);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setLoading(true);
     
     if (isEditing) {
-      // เมื่ออยู่ในโหมดแก้ไข แล้วกดปุ่ม ให้ยกเลิกการแก้ไข
       router.push(`/dashboard/inventory/boards/${partId}`);
     } else {
-      // เมื่ออยู่ในโหมดดูปกติ แล้วกดปุ่ม ให้เปิดโหมดแก้ไข
       router.push(`/dashboard/inventory/boards/${partId}?edit=true`);
     }
   };

@@ -17,25 +17,13 @@ import {
 } from 'lucide-react';
 import { SaveEditButton, AdjustStockButton, EditModeToggleButton } from './_components/SubmitButtons';
 
-// รายการประเภทบอร์ดสำหรับ Inverter
-const INVERTER_BOARD_TYPES = [
-  { value: 'MAIN_BOARD', label: 'MAIN_BOARD (เมนบอร์ด)' },
-  { value: 'AC_BOARD', label: 'AC_BOARD (บอร์ด AC)' },
-  { value: 'POWER_BOARD', label: 'POWER_BOARD (บอร์ดพาวเวอร์)' },
-  { value: 'IGBT_BOARD', label: 'IGBT_BOARD (บอร์ด IGBT)' },
-  { value: 'CONTROL_BOARD', label: 'CONTROL_BOARD (บอร์ดควบคุม)' },
-  { value: 'LCD_BOARD', label: 'LCD_BOARD (บอร์ดหน้าจอแสดงผล)' },
-  { value: 'COMMUNICATION_BOARD', label: 'COMMUNICATION_BOARD (บอร์ดการสื่อสาร)' },
-  { value: 'FILTER_BOARD', label: 'FILTER_BOARD (บอร์ดกรองไฟ)' },
-  { value: 'RELAY_BOARD', label: 'RELAY_BOARD (บอร์ดรีเลย์)' },
-  { value: 'CAPACITOR_BOARD', label: 'CAPACITOR_BOARD (บอร์ดคาปาซิเตอร์)' },
-  { value: 'WIFI_BOARD', label: 'WIFI_BOARD (บอร์ดไวไฟ)' },
-  { value: 'INV_BOARD', label: 'INV_BOARD (บอร์ดอินเวอร์เตอร์)' },
-  { value: 'IND_BOARD', label: 'IND_BOARD (บอร์ดอินดักเตอร์)' },
-  { value: 'GEN_BOARD', label: 'GEN_BOARD (บอร์ดเจนเนอเรเตอร์)' },
-  { value: 'PID_BOARD', label: 'PID_BOARD (บอร์ด PID)' },
-  { value: 'PV_BOARD', label: 'PV_BOARD (บอร์ด PV)' },
-  { value: 'ARC_BOARD', label: 'ARC_BOARD (บอร์ด ARC)' },
+// 5 หมวดหมู่อุปกรณ์หลักตามที่กำหนด
+const CATEGORIES = [
+  { value: 'Inverter', label: 'อินเวอร์เตอร์ (Inverter)' },
+  { value: 'Optimizer', label: 'ออปติไมเซอร์ (Optimizer)' },
+  { value: 'Micro Inverter', label: 'ไมโครอินเวอร์เตอร์ (Micro Inverter)' },
+  { value: 'Battery', label: 'แบตเตอรี่ (Battery)' },
+  { value: 'Solar Pump', label: 'อินเวอร์เตอร์ปั๊มน้ำ (Solar Pump)' },
 ];
 
 export default async function SparePartDetailPage({
@@ -71,6 +59,11 @@ export default async function SparePartDetailPage({
     notFound();
   }
 
+  // ดึงรายการประเภทบอร์ดมาตรฐานทั้งหมดที่ Admin เคยเพิ่มไว้ในระบบ (จากฐานข้อมูล)
+  const boardTypesFromDb = await (prisma as any).standardBoardType?.findMany
+    ? await (prisma as any).standardBoardType.findMany({ orderBy: { name: 'asc' } })
+    : [];
+
   // ดึงประวัติการทำรายการ (ดึงเฉพาะเมื่อเป็น ADMIN)
   const logs = isAdmin ? await prisma.stockLog.findMany({
     where: { sparePartId: id },
@@ -91,7 +84,14 @@ export default async function SparePartDetailPage({
     const name = formData.get('name') as string;
     const boardModelCode = formData.get('boardModelCode') as string;
     const category = formData.get('category') as string;
-    const boardType = formData.get('boardType') as string;
+    
+    // จัดการค่าประเภทบอร์ด (รองรับกรณีพิมพ์เพิ่มเองในช่องอื่นๆ)
+    let boardType = formData.get('boardType') as string;
+    const customBoardType = formData.get('customBoardType') as string;
+    if (boardType === 'OTHER' && customBoardType) {
+      boardType = customBoardType.trim();
+    }
+
     const model = formData.get('model') as string;
     const location = formData.get('location') as string;
     const minQuantity = parseInt(formData.get('minQuantity') as string) || 0;
@@ -172,13 +172,10 @@ export default async function SparePartDetailPage({
     redirect(`/dashboard/inventory/boards/${id}?stockSuccess=true`);
   }
 
-  // ค้นหา Label สำหรับแสดงผลในโหมดดูข้อมูลปกติ (Read-only)
-  const currentBoardTypeObj = INVERTER_BOARD_TYPES.find(
-    (t) => t.value === (part as any).boardType
-  );
-  const displayBoardType = currentBoardTypeObj
-    ? currentBoardTypeObj.label
-    : (part as any).boardType || '-';
+  // หาชื่อป้ายกำกับหมวดหมู่สำหรับแสดงผล
+  const currentCategoryObj = CATEGORIES.find((c) => c.value === part.category);
+  const displayCategory = currentCategoryObj ? currentCategoryObj.label : part.category || '-';
+  const displayBoardType = (part as any).boardType || '-';
 
   return (
     <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-4 sm:space-y-6 pb-24">
@@ -280,7 +277,7 @@ export default async function SparePartDetailPage({
 
           <div>
             <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2 flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-blue-600" /> หมวดหมู่
+              <Layers className="w-4 h-4 text-blue-600" /> หมวดหมู่หลัก (5 รายการ)
             </label>
             {isEditing ? (
               <select
@@ -288,14 +285,16 @@ export default async function SparePartDetailPage({
                 defaultValue={part.category || 'Inverter'}
                 className="w-full px-3.5 py-2.5 appearance-none bg-white border border-gray-300 rounded-xl text-base sm:text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition shadow-xs"
               >
-                <option value="Inverter">Inverter</option>
-                <option value="Battery">Battery</option>
-                <option value="Accessories">Accessories</option>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
               </select>
             ) : (
               <input
                 type="text"
-                value={part.category || '-'}
+                value={displayCategory}
                 disabled
                 className="w-full px-3.5 py-2.5 bg-gray-50/80 border border-transparent rounded-xl text-xs sm:text-sm font-bold text-gray-900 select-none"
               />
@@ -307,18 +306,27 @@ export default async function SparePartDetailPage({
               <Boxes className="w-4 h-4 text-blue-600" /> ประเภทบอร์ด
             </label>
             {isEditing ? (
-              <select
-                name="boardType"
-                defaultValue={(part as any).boardType || ''}
-                className="w-full px-3.5 py-2.5 appearance-none bg-white border border-gray-300 rounded-xl text-base sm:text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition shadow-xs"
-              >
-                <option value="">-- เลือกประเภทบอร์ด --</option>
-                {INVERTER_BOARD_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <select
+                  name="boardType"
+                  defaultValue={(part as any).boardType || ''}
+                  className="w-full px-3.5 py-2.5 appearance-none bg-white border border-gray-300 rounded-xl text-base sm:text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition shadow-xs"
+                >
+                  <option value="">-- ไม่ระบุ / ไม่มีประเภทบอร์ด --</option>
+                  {boardTypesFromDb.map((bt: any) => (
+                    <option key={bt.id || bt.name} value={bt.name}>
+                      {bt.name} {bt.category ? `(${bt.category})` : ''}
+                    </option>
+                  ))}
+                  <option value="OTHER">➕ อื่นๆ (ระบุเพิ่มเอง)...</option>
+                </select>
+                <input
+                  type="text"
+                  name="customBoardType"
+                  placeholder="พิมพ์ชื่อประเภทบอร์ดอื่นๆ..."
+                  className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 outline-none focus:bg-white focus:border-blue-500"
+                />
+              </div>
             ) : (
               <input
                 type="text"
