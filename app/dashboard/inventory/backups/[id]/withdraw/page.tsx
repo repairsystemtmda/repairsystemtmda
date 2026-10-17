@@ -1,13 +1,19 @@
 import prisma from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { writeFile } from 'fs/promises';
-import path from 'path';
 import crypto from 'crypto';
 import WithdrawForm from '../_components/WithdrawForm';
 import { getServerSession } from 'next-auth';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
+
+// สร้าง Supabase Client สำหรับอัปโหลดไฟล์ไปที่ Storage
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const BUCKET_NAME = "repair-images";
 
 export default async function BackupWithdrawPage({ 
   params 
@@ -97,6 +103,34 @@ export default async function BackupWithdrawPage({
     }
 
     try {
+      // อัปโหลดรูปภาพทั้งหมดขึ้น Supabase Storage ก่อนทำ Transaction
+      const uploadedImageUrls: string[] = [];
+
+      for (const file of validImages) {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const uniqueSuffix = crypto.randomUUID();
+        const filename = `${Date.now()}-${uniqueSuffix}-${file.name.replace(/\s+/g, '_')}`;
+        const filePath = `backup-withdraws/${id}/${filename}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .upload(filePath, buffer, {
+            contentType: file.type,
+            upsert: true,
+          });
+
+        if (uploadError) {
+          throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from(BUCKET_NAME)
+          .getPublicUrl(filePath);
+
+        uploadedImageUrls.push(publicUrlData.publicUrl);
+      }
+
       await prisma.$transaction(async (tx) => {
         const sparePart = await tx.sparePart.findUnique({ where: { id: sparePartId } });
         // ตรวจสอบสต็อก (ใช้ Math.abs เพราะ quantity ในฐานข้อมูลตัวแปรนี้เก็บเป็นค่าติดลบ)
@@ -135,21 +169,13 @@ export default async function BackupWithdrawPage({
           }
         });
 
-        // วนลูปบันทึกรูปภาพหลักฐาน
-        for (const file of validImages) {
-          const bytes = await file.arrayBuffer();
-          const buffer = Buffer.from(bytes);
-          const uniqueSuffix = crypto.randomUUID();
-          const filename = `${Date.now()}-${uniqueSuffix}-${file.name.replace(/\s+/g, '_')}`;
-          
-          const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'withdraws');
-          await writeFile(path.join(uploadDir, filename), buffer);
-          
+        // วนลูปบันทึก URL รูปภาพลงฐานข้อมูล
+        for (const imageUrl of uploadedImageUrls) {
           await tx.jobImage.create({
             data: {
               jobId: targetJob.id,
               stockLogId: stockLog.id,
-              url: `/uploads/withdraws/${filename}`,
+              url: imageUrl,
               type: 'STOCK_LOG',
             }
           });

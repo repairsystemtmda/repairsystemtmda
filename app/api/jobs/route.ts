@@ -3,6 +3,14 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getToken } from 'next-auth/jwt';
+import { createClient } from '@supabase/supabase-js';
+
+// 🌟 ตั้งค่า Supabase Client สำหรับจัดการอัปโหลดไฟล์เข้า Storage
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const BUCKET_NAME = 'repair-images';
 
 // Helper แปลงสถานะสำหรับไฟล์ Export
 function formatStatusForExport(status: string): string {
@@ -79,6 +87,33 @@ export async function GET(request: Request) {
   }
 }
 
+// Helper ฟังก์ชันอัปโหลดไฟล์ไปยัง Supabase Storage
+async function uploadFileToSupabase(file: File, folderPrefix: string): Promise<string> {
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const sanitizeName = file.name ? file.name.replaceAll(' ', '_') : 'unnamed.jpg';
+  const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}-${sanitizeName}`;
+  const filePath = `jobs/${folderPrefix}/${filename}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET_NAME)
+    .upload(filePath, buffer, {
+      contentType: file.type || 'image/jpeg',
+      upsert: true,
+    });
+
+  if (uploadError) {
+    console.error('Supabase Storage Upload Error:', uploadError);
+    throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from(BUCKET_NAME)
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
+}
+
 // POST: สร้างใบงานซ่อมใหม่
 export async function POST(request: Request) {
   try {
@@ -95,19 +130,19 @@ export async function POST(request: Request) {
         }
       });
 
+      // 🌟 อัปโหลดรูป Nameplate ขึ้น Supabase Storage
       const nameplateFile = formData.get('nameplateImage') as File | null;
       if (nameplateFile && nameplateFile.size > 0 && nameplateFile.size < 10 * 1024 * 1024) {
-        const buffer = Buffer.from(await nameplateFile.arrayBuffer());
-        const base64Image = `data:${nameplateFile.type};base64,${buffer.toString('base64')}`;
-        imageUrls.push(base64Image);
+        const publicUrl = await uploadFileToSupabase(nameplateFile, 'nameplates');
+        imageUrls.push(publicUrl);
       }
 
+      // 🌟 อัปโหลดรูปภาพประกอบอื่นๆ ขึ้น Supabase Storage
       const files = formData.getAll('images') as File[];
       for (const file of files) {
         if (file && file.size > 0 && file.size < 10 * 1024 * 1024) {
-          const buffer = Buffer.from(await file.arrayBuffer());
-          const base64Image = `data:${file.type};base64,${buffer.toString('base64')}`;
-          imageUrls.push(base64Image);
+          const publicUrl = await uploadFileToSupabase(file, 'boards');
+          imageUrls.push(publicUrl);
         }
       }
     } else {

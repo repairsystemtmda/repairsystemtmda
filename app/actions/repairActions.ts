@@ -2,8 +2,41 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { writeFile } from 'fs/promises';
-import path from 'path';
+import { createClient } from '@supabase/supabase-js';
+
+// 🌟 ตั้งค่า Supabase Client สำหรับจัดการอัปโหลดไฟล์เข้า Storage
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const BUCKET_NAME = 'repair-images';
+
+// Helper ฟังก์ชันอัปโหลดไฟล์ไปยัง Supabase Storage
+async function uploadFileToSupabase(file: File, prefix: string): Promise<string> {
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const sanitizeName = file.name ? file.name.replaceAll(' ', '_') : 'unnamed.jpg';
+  const filename = `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}-${sanitizeName}`;
+  const filePath = `repairs/phase2/${filename}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET_NAME)
+    .upload(filePath, buffer, {
+      contentType: file.type || 'image/jpeg',
+      upsert: true,
+    });
+
+  if (uploadError) {
+    console.error('Supabase Storage Upload Error:', uploadError);
+    throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from(BUCKET_NAME)
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
+}
 
 export async function submitRepairWithInventoryDeduction(formData: FormData) {
   try {
@@ -36,20 +69,9 @@ export async function submitRepairWithInventoryDeduction(formData: FormData) {
       return { success: false, message: 'อะไหล่ที่เลือกหมด หรือไม่พบในคลัง' };
     }
 
-    // 4. บันทึกรูปภาพลงในเซิร์ฟเวอร์ (จัดเก็บใน public/uploads)
-    const saveImageToDisk = async (file: File, prefix: string) => {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const filename = `${prefix}-${Date.now()}-${file.name.replace(/\s/g, '_')}`;
-      const uploadDir = path.join(process.cwd(), 'public/uploads');
-      const filepath = path.join(uploadDir, filename);
-      
-      await writeFile(filepath, buffer);
-      return `/uploads/${filename}`;
-    };
-
-    const imageUrl1 = await saveImageToDisk(image1, 'repair-phase2-img1');
-    const imageUrl2 = await saveImageToDisk(image2, 'repair-phase2-img2');
+    // 4. 🌟 อัปโหลดรูปภาพขึ้น Supabase Storage แทนการบันทึกลงดิสก์เซิร์ฟเวอร์
+    const imageUrl1 = await uploadFileToSupabase(image1, 'repair-phase2-img1');
+    const imageUrl2 = await uploadFileToSupabase(image2, 'repair-phase2-img2');
 
     // 5. ทำ Transaction อัปเดตฐานข้อมูลและผูก stockLogId กับรูปภาพ
     await prisma.$transaction(async (tx) => {

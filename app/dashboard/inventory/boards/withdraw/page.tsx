@@ -3,10 +3,16 @@ export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import WithdrawClient from './WithdrawClient';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { createClient } from '@supabase/supabase-js';
+
+// สร้าง Supabase Client สำหรับอัปโหลดไฟล์ไปที่ Storage
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const BUCKET_NAME = "repair-images";
 
 async function handleWithdrawAction(formData: FormData) {
   'use server';
@@ -104,10 +110,9 @@ async function handleWithdrawAction(formData: FormData) {
 
   const uploadedImageUrls: string[] = [];
   if (purposeType === 'JOB' && (boardImageBase64 || qrImageBase64)) {
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'withdraws');
-    await mkdir(uploadDir, { recursive: true });
-
-    async function saveBase64Image(base64Str: string, prefix: string) {
+    
+    // ฟังก์ชันช่วยอัปโหลด Base64 ขึ้น Supabase Storage
+    async function uploadBase64ToSupabase(base64Str: string, prefix: string) {
       if (!base64Str || !base64Str.includes('base64,')) return null;
       const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       if (!matches || matches.length !== 3) return null;
@@ -115,17 +120,32 @@ async function handleWithdrawAction(formData: FormData) {
       const buffer = Buffer.from(matches[2], 'base64');
       const ext = matches[1].split('/')[1] || 'jpg';
       const fileName = `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
-      
-      await writeFile(path.join(uploadDir, fileName), buffer);
-      return `/uploads/withdraws/${fileName}`;
+      const filePath = `board-withdraws/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, buffer, {
+          contentType: matches[1],
+          upsert: true,
+        });
+
+      if (uploadError) {
+        throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(filePath);
+
+      return publicUrlData.publicUrl;
     }
 
     if (boardImageBase64) {
-      const savedUrl = await saveBase64Image(boardImageBase64, 'board');
+      const savedUrl = await uploadBase64ToSupabase(boardImageBase64, 'board');
       if (savedUrl) uploadedImageUrls.push(savedUrl);
     }
     if (qrImageBase64) {
-      const savedUrl = await saveBase64Image(qrImageBase64, 'qr');
+      const savedUrl = await uploadBase64ToSupabase(qrImageBase64, 'qr');
       if (savedUrl) uploadedImageUrls.push(savedUrl);
     }
   }
@@ -135,7 +155,6 @@ async function handleWithdrawAction(formData: FormData) {
   if (purposeType === 'JOB' && jobId && jobId.trim() !== '') {
     const cleanId = jobId.trim();
     
-    // ลองหาในตาราง Job ก่อน
     const jobInDb = await prisma.job.findUnique({
       where: { id: cleanId },
       select: { id: true }
@@ -144,7 +163,6 @@ async function handleWithdrawAction(formData: FormData) {
     if (jobInDb) {
       validJobId = jobInDb.id;
     } else {
-      // ถ้าไม่เจอใน Job แปลว่าเป็น BackupDevice ID ให้ค้นหาหรือสร้าง Job รองรับ
       const backupInDb = await prisma.backupDevice.findUnique({
         where: { id: cleanId },
         include: { jobs: { orderBy: { createdAt: 'desc' } } }
@@ -154,7 +172,6 @@ async function handleWithdrawAction(formData: FormData) {
         if (backupInDb.jobs.length > 0) {
           validJobId = backupInDb.jobs[0].id;
         } else {
-          // สร้าง Job ใหม่ให้เครื่องสำรองโดยอัตโนมัติ เพื่อให้ผูกข้อมูลได้สมบูรณ์
           const newJob = await prisma.job.create({
             data: {
               jobNo: `BK-${backupInDb.serialNumber || Date.now()}`,
@@ -186,7 +203,7 @@ async function handleWithdrawAction(formData: FormData) {
 
     const stockLog = await tx.stockLog.create({
       data: {
-        jobId: validJobId, // บันทึกผูกรหัสใบงานอย่างถูกต้อง
+        jobId: validJobId,
         sparePartId: sparePartId,
         quantity: -quantity,
         type: purposeType === 'JOB' ? 'USE_FOR_REPAIR' : 'GENERAL_WITHDRAW',

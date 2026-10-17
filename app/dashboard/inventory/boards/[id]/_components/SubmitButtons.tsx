@@ -5,13 +5,64 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { Loader2, Save, CheckCircle2, Edit3, X } from "lucide-react";
 
+// 🌟 คอมโพเนนต์สำหรับจัดการ Dropdown และซ่อน/แสดงช่องกรอกชื่อประเภทอื่นๆ
+export function BoardTypeSelector({ 
+  boardTypesFromDb, 
+  initialValue 
+}: { 
+  boardTypesFromDb: any[]; 
+  initialValue: string;
+}) {
+  const isCustomInitial = Boolean(
+    initialValue && !boardTypesFromDb.some((bt) => bt.name === initialValue)
+  );
+
+  const [selectedValue, setSelectedValue] = useState(
+    isCustomInitial ? "OTHER" : initialValue
+  );
+  const [customValue, setCustomValue] = useState(
+    isCustomInitial ? initialValue : ""
+  );
+
+  return (
+    <div className="space-y-2">
+      <select
+        name="boardType"
+        value={selectedValue}
+        onChange={(e) => setSelectedValue(e.target.value)}
+        className="w-full px-3.5 py-2.5 appearance-none bg-white border border-gray-300 rounded-xl text-base sm:text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition shadow-xs"
+      >
+        <option value="">-- เลือกประเภทบอร์ดมาตรฐาน --</option>
+        {boardTypesFromDb.map((bt: any) => (
+          <option key={bt.id || bt.name} value={bt.name}>
+            {bt.name}
+          </option>
+        ))}
+        <option value="OTHER">OTHER (บอร์ดเสริม / อื่นๆ / กำหนดเอง)</option>
+      </select>
+
+      {/* จะแสดงช่องกรอกข้อความนี้ก็ต่อเมื่อเลือก "OTHER" เท่านั้น */}
+      {selectedValue === "OTHER" && (
+        <input
+          type="text"
+          name="customBoardType"
+          value={customValue}
+          onChange={(e) => setCustomValue(e.target.value)}
+          placeholder="กรอกชื่อประเภทบอร์ดอื่นๆ..."
+          required
+          className="w-full px-3.5 py-2.5 bg-white border border-blue-300 rounded-xl text-xs font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-xs"
+        />
+      )}
+    </div>
+  );
+}
+
 // 🌟 ปุ่มสลับโหมด "แก้ไขข้อมูล" แบบเคลียร์สถานะอัตโนมัติเมื่อ URL เปลี่ยน
 export function EditModeToggleButton({ partId, isEditing }: { partId: string; isEditing: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
 
-  // เมื่อ URL หรือสถานะ isEditing เปลี่ยน ให้รีเซ็ตสถานะ loading กลับเป็นปกติทันที
   useEffect(() => {
     setLoading(false);
   }, [searchParams, isEditing]);

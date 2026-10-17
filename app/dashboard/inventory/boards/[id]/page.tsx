@@ -15,7 +15,7 @@ import {
   Layers, 
   Boxes
 } from 'lucide-react';
-import { SaveEditButton, AdjustStockButton, EditModeToggleButton } from './_components/SubmitButtons';
+import { SaveEditButton, AdjustStockButton, EditModeToggleButton, BoardTypeSelector } from './_components/SubmitButtons';
 
 // 5 หมวดหมู่อุปกรณ์หลักตามที่กำหนด
 const CATEGORIES = [
@@ -59,7 +59,7 @@ export default async function SparePartDetailPage({
     notFound();
   }
 
-  // ดึงรายการประเภทบอร์ดมาตรฐานทั้งหมดที่ Admin เคยเพิ่มไว้ในระบบ (รองรับทั้งตาราง standardBoardType หรือ boardType ตามโครงสร้างฐานข้อมูล)
+  // ดึงรายการประเภทบอร์ดมาตรฐานทั้งหมดที่ Admin เคยเพิ่มไว้ในระบบ
   let boardTypesFromDb: any[] = [];
   try {
     if ((prisma as any).standardBoardType) {
@@ -97,7 +97,7 @@ export default async function SparePartDetailPage({
     const customBoardType = formData.get('customBoardType') as string;
     if (boardType === 'OTHER' && customBoardType) {
       boardType = customBoardType.trim();
-    } else if (boardType === '' || boardType === '-- ไม่ระบุ --') {
+    } else if (boardType === '' || boardType === '-- เลือกประเภทบอร์ดมาตรฐาน --') {
       boardType = '';
     }
 
@@ -239,7 +239,6 @@ export default async function SparePartDetailPage({
             </span>
           </div>
 
-          {/* ปุ่มสลับโหมด แก้ไขข้อมูล (แสดงเฉพาะ ADMIN เท่านั้น) พร้อม Loading ตอบสนองเมื่อคลิก */}
           <div>
             {isAdmin && (
               <EditModeToggleButton partId={id} isEditing={isEditing} />
@@ -315,27 +314,10 @@ export default async function SparePartDetailPage({
               <Boxes className="w-4 h-4 text-blue-600" /> ประเภทบอร์ดมาตรฐาน (Board Type)
             </label>
             {isEditing ? (
-              <div className="space-y-2">
-                <select
-                  name="boardType"
-                  defaultValue={(part as any).boardType || ''}
-                  className="w-full px-3.5 py-2.5 appearance-none bg-white border border-gray-300 rounded-xl text-base sm:text-sm font-bold text-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition shadow-xs"
-                >
-                  <option value="">-- ไม่ระบุ / ไม่มีประเภทบอร์ด --</option>
-                  {boardTypesFromDb.map((bt: any) => (
-                    <option key={bt.id || bt.name} value={bt.name}>
-                      {bt.name}
-                    </option>
-                  ))}
-                  <option value="OTHER">➕ อื่นๆ (ระบุเพิ่มเอง)...</option>
-                </select>
-                <input
-                  type="text"
-                  name="customBoardType"
-                  placeholder="กรอกชื่อประเภทบอร์ดอื่นๆ..."
-                  className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-900 outline-none focus:bg-white focus:border-blue-500"
-                />
-              </div>
+              <BoardTypeSelector 
+                boardTypesFromDb={boardTypesFromDb} 
+                initialValue={(part as any).boardType || ''} 
+              />
             ) : (
               <input
                 type="text"

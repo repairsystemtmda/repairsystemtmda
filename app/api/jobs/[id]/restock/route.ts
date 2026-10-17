@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { writeFile } from "fs/promises";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
+
+// สร้าง Supabase Client สำหรับอัปโหลดไฟล์ไปที่ Storage
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const BUCKET_NAME = "repair-images";
 
 export async function POST(
   request: Request,
@@ -65,22 +71,38 @@ export async function POST(
     let image1Path = null;
     let image2Path = null;
 
-    if (image1 && image1.size > 0) {
-      const bytes = await image1.arrayBuffer();
+    // ฟังก์ชันช่วยอัปโหลดไฟล์ขึ้น Supabase Storage
+    const uploadToSupabase = async (file: File, prefix: string) => {
+      const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const filename = `${Date.now()}-1-${image1.name.replaceAll(" ", "_")}`;
-      const filepath = path.join(process.cwd(), "public/uploads", filename);
-      await writeFile(filepath, buffer);
-      image1Path = `/uploads/${filename}`;
+      const filename = `${Date.now()}-${prefix}-${file.name.replaceAll(" ", "_")}`;
+      const filePath = `restock/${jobId}/${filename}`;
+
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, buffer, {
+          contentType: file.type,
+          upsert: true,
+        });
+
+      if (error) {
+        throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${error.message}`);
+      }
+
+      // ดึง Public URL ของรูปที่อัปโหลด
+      const { data: publicUrlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(filePath);
+
+      return publicUrlData.publicUrl;
+    };
+
+    if (image1 && image1.size > 0) {
+      image1Path = await uploadToSupabase(image1, "1");
     }
 
     if (image2 && image2.size > 0) {
-      const bytes = await image2.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const filename = `${Date.now()}-2-${image2.name.replaceAll(" ", "_")}`;
-      const filepath = path.join(process.cwd(), "public/uploads", filename);
-      await writeFile(filepath, buffer);
-      image2Path = `/uploads/${filename}`;
+      image2Path = await uploadToSupabase(image2, "2");
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -97,7 +119,7 @@ export async function POST(
         data: { stock: { decrement: quantity } },
       });
 
-      // 1. สร้าง StockLog สำหรับบันทึกประวัติการเบิกอะไหล่ (ใช้ validUserId ที่ผ่านการตรวจสอบแล้ว)
+      // 1. สร้าง StockLog สำหรับบันทึกประวัติการเบิกอะไหล่
       const stockLog = await tx.stockLog.create({
         data: {
           sparePartId: sparePartId,
@@ -105,11 +127,11 @@ export async function POST(
           quantity: -quantity,
           type: "USE_FOR_REPAIR",
           note: note ? `เบิกอะไหล่สำหรับซ่อม: ${note}` : `ตัดสต็อกอัตโนมัติสำหรับการซ่อมบำรุง`,
-          userId: validUserId, // ป้องกัน Error กรณีไอดีผู้ใช้ไม่ตรงกับฐานข้อมูล
+          userId: validUserId,
         },
       });
 
-      // 2. บันทึกรูปภาพลงตาราง JobImage และผูกกับ stockLogId
+      // 2. บันทึก URL รูปภาพลงตาราง JobImage
       if (image1Path) {
         await tx.jobImage.create({
           data: {
@@ -132,7 +154,7 @@ export async function POST(
         });
       }
 
-      // 3. แก้ไขสถานะเป็น IN_REPAIR เพื่อให้ตรงกับเงื่อนไขปุ่มในหน้าแสดงผลหลัก
+      // 3. แก้ไขสถานะเป็น IN_REPAIR
       const updatedJob = await tx.job.update({
         where: { id: jobId },
         data: {
