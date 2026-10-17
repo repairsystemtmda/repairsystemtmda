@@ -5,17 +5,20 @@ import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { Loader2, Save, CheckCircle2, Edit3, X } from "lucide-react";
 
-// 🌟 ปุ่มสลับโหมด "แก้ไขข้อมูล" พร้อมสถานะกำลังโหลด
+// 🌟 ปุ่มสลับโหมด "แก้ไขข้อมูล" พร้อมสถานะกำลังโหลดที่ถูกต้อง
 export function EditModeToggleButton({ partId, isEditing }: { partId: string; isEditing: boolean }) {
   const router = useRouter();
-  const [loadingAction, setLoadingAction] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    setLoadingAction(true);
+    setLoading(true);
+    
     if (isEditing) {
+      // เมื่ออยู่ในโหมดแก้ไข แล้วกดปุ่ม ให้ยกเลิกการแก้ไข
       router.push(`/dashboard/inventory/boards/${partId}`);
     } else {
+      // เมื่ออยู่ในโหมดดูปกติ แล้วกดปุ่ม ให้เปิดโหมดแก้ไข
       router.push(`/dashboard/inventory/boards/${partId}?edit=true`);
     }
   };
@@ -24,10 +27,10 @@ export function EditModeToggleButton({ partId, isEditing }: { partId: string; is
     return (
       <button
         onClick={handleClick}
-        disabled={loadingAction}
+        disabled={loading}
         className="w-full sm:w-auto px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70"
       >
-        {loadingAction ? (
+        {loading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin text-gray-700" />
             <span>กำลังยกเลิก...</span>
@@ -45,10 +48,10 @@ export function EditModeToggleButton({ partId, isEditing }: { partId: string; is
   return (
     <button
       onClick={handleClick}
-      disabled={loadingAction}
+      disabled={loading}
       className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70"
     >
-      {loadingAction ? (
+      {loading ? (
         <>
           <Loader2 className="w-4 h-4 animate-spin text-white" />
           <span>กำลังเปิดฟอร์ม...</span>

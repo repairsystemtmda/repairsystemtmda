@@ -6,6 +6,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { Package, PlusCircle, MinusCircle, RotateCcw, History, Eye, AlertTriangle, Layers, MapPin, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import DeleteButton from './_components/DeleteButton';
 import InventoryFilterForm from './_components/InventoryFilterForm';
+import { FilterLinkButton } from './_components/FilterLinkButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -142,17 +143,17 @@ export default async function InventoryPage({
         
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           {isAdmin && (
-            <Link
+            <FilterLinkButton
               href={`/dashboard/inventory/boards?query=${query}&category=${category}&boardType=${boardType}&filter=low`}
+              label={`อะไหล่เหลือน้อย (${lowStockTotal})`}
+              icon={<AlertTriangle className="w-4 h-4 flex-shrink-0" />}
+              loadingText="กำลังโหลด..."
               className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl shadow-sm transition ${
                 filter === 'low' 
                   ? 'bg-red-600 text-white' 
                   : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200'
               }`}
-            >
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" /> 
-              <span>อะไหล่เหลือน้อย ({lowStockTotal})</span>
-            </Link>
+            />
           )}
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
@@ -199,12 +200,13 @@ export default async function InventoryPage({
             <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
             กำลังแสดงเฉพาะรายการอะไหล่ที่เหลือน้อย (Stock ≤ Min Quantity)
           </div>
-          <Link
+          <FilterLinkButton
             href={`/dashboard/inventory/boards?query=${query}&category=${category}&boardType=${boardType}`}
+            label="ล้างตัวกรอง (แสดงทั้งหมด)"
+            icon={<X className="w-3.5 h-3.5" />}
+            loadingText="กำลังล้าง..."
             className="text-xs bg-white border border-red-300 hover:bg-red-100 px-3 py-1.5 rounded-lg font-bold transition text-red-700 text-center inline-flex items-center justify-center gap-1"
-          >
-            <X className="w-3.5 h-3.5" /> ล้างตัวกรอง (แสดงทั้งหมด)
-          </Link>
+          />
         </div>
       )}
 
