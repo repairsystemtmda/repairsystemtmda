@@ -25,7 +25,8 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
-  User
+  User,
+  Loader2
 } from 'lucide-react';
 import { JOB_STATUSES, getStatusLabel } from '@/lib/constants';
 import { isInternalOrBackupJob } from '@/lib/jobUtils';
@@ -90,6 +91,7 @@ function JobsContent() {
   const itemsPerPage = 10;
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [exportBrand, setExportBrand] = useState<'deye' | 'invt'>('deye');
   const [datePreset, setDatePreset] = useState<'7days' | '15days' | 'thisMonth' | 'lastMonth' | 'custom'>('15days');
   const [customStartDate, setCustomStartDate] = useState('');
@@ -196,6 +198,7 @@ function JobsContent() {
   };
 
   const handleConfirmExport = () => {
+    setIsExporting(true);
     const now = new Date();
     let startDate = '';
     let endDate = now.toISOString().split('T')[0];
@@ -221,6 +224,7 @@ function JobsContent() {
       endDate = customEndDate;
       if (!startDate || !endDate) {
         alert('กรุณาเลือกวันที่เริ่มต้นและสิ้นสุดให้ครบถ้วน');
+        setIsExporting(false);
         return;
       }
     }
@@ -230,7 +234,11 @@ function JobsContent() {
       : `/api/export-dashboard?startDate=${startDate}&endDate=${endDate}`;
 
     window.open(exportUrl, '_blank');
-    setIsExportModalOpen(false);
+
+    setTimeout(() => {
+      setIsExporting(false);
+      setIsExportModalOpen(false);
+    }, 1200);
   };
 
   const calculatePendingDays = (createdAt: string) => {
@@ -463,33 +471,13 @@ function JobsContent() {
 
       <div className="w-full space-y-4">
         {loading ? (
-          <div className="w-full space-y-3">
-            <div className="grid grid-cols-1 gap-3 md:hidden">
-              {[1, 2, 3, 4].map((n) => (
-                <div key={n} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm space-y-3 animate-pulse">
-                  <div className="flex justify-between">
-                    <div className="w-24 h-4 bg-gray-200 rounded"></div>
-                    <div className="w-20 h-5 bg-gray-200 rounded-full"></div>
-                  </div>
-                  <div className="w-36 h-5 bg-gray-200 rounded"></div>
-                  <div className="bg-gray-50 p-2.5 rounded-xl space-y-2">
-                    <div className="w-full h-4 bg-gray-200 rounded"></div>
-                    <div className="w-3/4 h-4 bg-gray-200 rounded"></div>
-                  </div>
-                </div>
-              ))}
+          <div className="min-h-[50vh] w-full flex flex-col items-center justify-center space-y-3 bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+            <div className="relative w-12 h-12 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+              <Loader2 className="w-5 h-5 text-blue-600 animate-pulse" />
             </div>
-
-            <div className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <div className="animate-pulse space-y-4">
-                <div className="h-10 bg-gray-200 rounded-xl w-full"></div>
-                <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <div key={n} className="h-12 bg-gray-100 rounded-lg w-full"></div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <p className="text-xs sm:text-sm font-bold text-gray-600 animate-pulse">กำลังโหลด...</p>
           </div>
         ) : filteredJobs.length > 0 ? (
           <>
@@ -703,30 +691,43 @@ function JobsContent() {
 
       {isExportModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black text-gray-900">
-                Export รายงาน ({exportBrand === 'deye' ? 'Deye/TMDA' : 'อื่นๆ'})
-              </h3>
-              <button onClick={() => setIsExportModalOpen(false)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-gray-700 block">ช่วงเวลา</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setDatePreset('7days')} className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${datePreset === '7days' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-200 text-gray-700'}`}>ย้อนหลัง 7 วัน</button>
-                <button type="button" onClick={() => setDatePreset('15days')} className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${datePreset === '15days' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-200 text-gray-700'}`}>ย้อนหลัง 15 วัน</button>
-                <button type="button" onClick={() => setDatePreset('thisMonth')} className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${datePreset === 'thisMonth' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-200 text-gray-700'}`}>เดือนนี้</button>
-                <button type="button" onClick={() => setDatePreset('lastMonth')} className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${datePreset === 'lastMonth' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-200 text-gray-700'}`}>เดือนที่แล้ว</button>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl relative">
+            {isExporting ? (
+              <div className="py-8 flex flex-col items-center justify-center space-y-3">
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
+                  <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-pulse" />
+                </div>
+                <p className="text-xs sm:text-sm font-bold text-gray-600 animate-pulse">กำลังสร้างและดาวน์โหลดรายงาน...</p>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-black text-gray-900">
+                    Export รายงาน ({exportBrand === 'deye' ? 'Deye/TMDA' : 'อื่นๆ'})
+                  </h3>
+                  <button onClick={() => setIsExportModalOpen(false)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
-              <button type="button" onClick={() => setIsExportModalOpen(false)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs">ยกเลิก</button>
-              <button type="button" onClick={handleConfirmExport} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm">ดาวน์โหลดรายงาน Excel</button>
-            </div>
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-gray-700 block">ช่วงเวลา</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setDatePreset('7days')} className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${datePreset === '7days' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-200 text-gray-700'}`}>ย้อนหลัง 7 วัน</button>
+                    <button type="button" onClick={() => setDatePreset('15days')} className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${datePreset === '15days' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-200 text-gray-700'}`}>ย้อนหลัง 15 วัน</button>
+                    <button type="button" onClick={() => setDatePreset('thisMonth')} className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${datePreset === 'thisMonth' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-200 text-gray-700'}`}>เดือนนี้</button>
+                    <button type="button" onClick={() => setDatePreset('lastMonth')} className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${datePreset === 'lastMonth' ? 'bg-blue-50 border-blue-500 text-blue-600' : 'border-gray-200 text-gray-700'}`}>เดือนที่แล้ว</button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                  <button type="button" onClick={() => setIsExportModalOpen(false)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs">ยกเลิก</button>
+                  <button type="button" onClick={handleConfirmExport} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-sm">ดาวน์โหลดรายงาน Excel</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -736,7 +737,18 @@ function JobsContent() {
 
 export default function JobsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-gray-500 font-bold">กำลังโหลดข้อมูล...</div>}>
+    <Suspense 
+      fallback={
+        <div className="min-h-[70vh] w-full flex flex-col items-center justify-center space-y-3">
+          <div className="relative w-12 h-12 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full border-4 border-blue-100"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+            <Loader2 className="w-5 h-5 text-blue-600 animate-pulse" />
+          </div>
+          <p className="text-xs sm:text-sm font-bold text-gray-600 animate-pulse">กำลังโหลด...</p>
+        </div>
+      }
+    >
       <JobsContent />
     </Suspense>
   );
