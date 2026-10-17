@@ -13,11 +13,9 @@ import {
   Cpu, 
   MapPin, 
   Layers, 
-  Edit3, 
-  X,
   Boxes
 } from 'lucide-react';
-import { SaveEditButton, AdjustStockButton } from './_components/SubmitButtons';
+import { SaveEditButton, AdjustStockButton, EditModeToggleButton } from './_components/SubmitButtons';
 
 // รายการประเภทบอร์ดสำหรับ Inverter
 const INVERTER_BOARD_TYPES = [
@@ -235,24 +233,10 @@ export default async function SparePartDetailPage({
             </span>
           </div>
 
-          {/* ปุ่มสลับโหมด แก้ไขข้อมูล (แสดงเฉพาะ ADMIN เท่านั้น) */}
+          {/* ปุ่มสลับโหมด แก้ไขข้อมูล (แสดงเฉพาะ ADMIN เท่านั้น) พร้อม Loading ตอบสนองเมื่อคลิก */}
           <div>
             {isAdmin && (
-              isEditing ? (
-                <Link
-                  href={`/dashboard/inventory/boards/${id}`}
-                  className="w-full sm:w-auto px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
-                >
-                  <X className="w-4 h-4" /> ยกเลิกการแก้ไข
-                </Link>
-              ) : (
-                <Link
-                  href={`/dashboard/inventory/boards/${id}?edit=true`}
-                  className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-1.5"
-                >
-                  <Edit3 className="w-4 h-4" /> แก้ไขข้อมูล
-                </Link>
-              )
+              <EditModeToggleButton partId={id} isEditing={isEditing} />
             )}
           </div>
         </div>
@@ -407,7 +391,7 @@ export default async function SparePartDetailPage({
             </div>
           </div>
 
-          {/* 🌟 เรียกใช้ SaveEditButton ที่มี Inline Loading */}
+          {/* ปุ่มบันทึกการแก้ไขข้อมูล */}
           {isAdmin && isEditing && (
             <div className="md:col-span-2 flex justify-end pt-2">
               <SaveEditButton />
@@ -416,7 +400,7 @@ export default async function SparePartDetailPage({
         </form>
       </div>
 
-      {/* ส่วนสำหรับ Admin ปรับเพิ่ม/ลดสต็อก (แสดงเฉพาะ ADMIN เท่านั้น) */}
+      {/* ส่วนสำหรับ Admin ปรับเพิ่ม/ลดสต็อก */}
       {isAdmin && (
         <div className="bg-white p-4 sm:p-8 rounded-2xl shadow-sm border border-gray-200 space-y-4">
           <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
@@ -466,7 +450,6 @@ export default async function SparePartDetailPage({
                   placeholder="เช่น ตรวจนับสต็อกประจำเดือน..."
                   className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm text-gray-900 focus:ring-2 focus:ring-slate-500/20 outline-none transition shadow-xs"
                 />
-                {/* 🌟 เรียกใช้ AdjustStockButton ที่มี Inline Loading */}
                 <AdjustStockButton />
               </div>
             </div>
@@ -474,7 +457,7 @@ export default async function SparePartDetailPage({
         </div>
       )}
 
-      {/* ประวัติการเบิก-จ่าย ล่าสุด (แสดงเฉพาะ ADMIN เท่านั้น) */}
+      {/* ประวัติการเบิก-จ่าย ล่าสุด */}
       {isAdmin && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden space-y-3">
           <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center gap-2">
@@ -482,7 +465,6 @@ export default async function SparePartDetailPage({
             <h2 className="text-base sm:text-lg font-bold text-gray-900">ประวัติการเคลื่อนไหวล่าสุด</h2>
           </div>
           
-          {/* 📱 มุมมองมือถือ: แสดงผลแบบ Card แนวตั้ง */}
           <div className="grid grid-cols-1 gap-3 p-4 sm:hidden">
             {logs.length > 0 ? (
               logs.map((log) => (
@@ -512,7 +494,6 @@ export default async function SparePartDetailPage({
             )}
           </div>
 
-          {/* 💻 มุมมองคอมพิวเตอร์ (Desktop): แสดงผลเป็นตาราง */}
           <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>

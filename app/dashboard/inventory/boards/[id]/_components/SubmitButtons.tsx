@@ -1,7 +1,67 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
-import { Loader2, Save, CheckCircle2 } from "lucide-react";
+import { Loader2, Save, CheckCircle2, Edit3, X } from "lucide-react";
+
+// 🌟 ปุ่มสลับโหมด "แก้ไขข้อมูล" พร้อมสถานะกำลังโหลด
+export function EditModeToggleButton({ partId, isEditing }: { partId: string; isEditing: boolean }) {
+  const router = useRouter();
+  const [loadingAction, setLoadingAction] = useState(false);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setLoadingAction(true);
+    if (isEditing) {
+      router.push(`/dashboard/inventory/boards/${partId}`);
+    } else {
+      router.push(`/dashboard/inventory/boards/${partId}?edit=true`);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <button
+        onClick={handleClick}
+        disabled={loadingAction}
+        className="w-full sm:w-auto px-3.5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs sm:text-sm rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70"
+      >
+        {loadingAction ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin text-gray-700" />
+            <span>กำลังยกเลิก...</span>
+          </>
+        ) : (
+          <>
+            <X className="w-4 h-4" />
+            <span>ยกเลิกการแก้ไข</span>
+          </>
+        )}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={loadingAction}
+      className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70"
+    >
+      {loadingAction ? (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin text-white" />
+          <span>กำลังเปิดฟอร์ม...</span>
+        </>
+      ) : (
+        <>
+          <Edit3 className="w-4 h-4" />
+          <span>แก้ไขข้อมูล</span>
+        </>
+      )}
+    </button>
+  );
+}
 
 // 🌟 ปุ่มสำหรับการบันทึกการแก้ไขข้อมูลทั่วไป
 export function SaveEditButton() {
