@@ -263,6 +263,29 @@ export default async function BackupDeviceDetailPage({
       }
     }
 
+    // 🌟 เพิ่มส่วนนี้: รองรับการรับไฟล์รูปภาพเพิ่มเติม (otherImages) และบันทึกลงตาราง BackupDeviceImage
+    const otherImageFiles = formData.getAll('otherImages') as File[];
+    for (const file of otherImageFiles) {
+      if (file && file instanceof File && file.size > 0) {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const uniqueSuffix = crypto.randomUUID();
+        const filename = `${Date.now()}-${uniqueSuffix}-${file.name.replace(/\s+/g, '_')}`;
+        try {
+          await writeFile(path.join(uploadDir, filename), buffer);
+          await prisma.backupDeviceImage.create({
+            data: {
+              url: filename,
+              type: 'CONDITION',
+              backupDeviceId: deviceId,
+            }
+          });
+        } catch (err) {
+          console.error('BackupDeviceImage upload error:', err);
+        }
+      }
+    }
+
     const updateData: any = {
       status,
       category,

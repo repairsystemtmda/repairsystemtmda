@@ -119,7 +119,7 @@ export async function POST(request: Request) {
   try {
     const contentType = request.headers.get('content-type') || '';
     let bodyData: any = {};
-    const imageUrls: string[] = [];
+    const structuredImages: { url: string; type: string }[] = [];
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
@@ -130,23 +130,36 @@ export async function POST(request: Request) {
         }
       });
 
-      // 🌟 อัปโหลดรูป Nameplate ขึ้น Supabase Storage
+      // 🌟 1. แยกอัปโหลดและระบุ Type เป็น 'NAMEPLATE' โดยตรง
       const nameplateFile = formData.get('nameplateImage') as File | null;
       if (nameplateFile && nameplateFile.size > 0 && nameplateFile.size < 10 * 1024 * 1024) {
         const publicUrl = await uploadFileToSupabase(nameplateFile, 'nameplates');
-        imageUrls.push(publicUrl);
+        structuredImages.push({ url: publicUrl, type: 'NAMEPLATE' });
       }
 
-      // 🌟 อัปโหลดรูปภาพประกอบอื่นๆ ขึ้น Supabase Storage
+      // 🌟 2. อัปโหลดรูปภาพประกอบอื่นๆ และระบุ Type เป็น 'OTHER' โดยตรง
       const files = formData.getAll('images') as File[];
       for (const file of files) {
         if (file && file.size > 0 && file.size < 10 * 1024 * 1024) {
           const publicUrl = await uploadFileToSupabase(file, 'boards');
-          imageUrls.push(publicUrl);
+          structuredImages.push({ url: publicUrl, type: 'OTHER' });
         }
       }
     } else {
       bodyData = await request.json();
+
+      // 🌟 รองรับกรณีส่งข้อมูลแบบ JSON (รับ imageUrl เป็น Nameplate และ images เป็นรูปอื่นๆ)
+      if (bodyData.imageUrl && typeof bodyData.imageUrl === 'string' && bodyData.imageUrl.trim() !== '') {
+        structuredImages.push({ url: bodyData.imageUrl, type: 'NAMEPLATE' });
+      }
+
+      if (Array.isArray(bodyData.images)) {
+        bodyData.images.forEach((url: string) => {
+          if (url && typeof url === 'string' && url.trim() !== '') {
+            structuredImages.push({ url, type: 'OTHER' });
+          }
+        });
+      }
     }
 
     // 1. ค้นหาผู้ใช้งานจริงแบบยืดหยุ่น (Exact Match + Partial Match)
@@ -225,7 +238,6 @@ export async function POST(request: Request) {
       hasBox,
       hasWifiDongle,
       isWarranty,
-      images: jsonImages,
       status: inputStatus,
       backupDeviceId,
     } = bodyData;
@@ -323,10 +335,6 @@ export async function POST(request: Request) {
       finalJobNo = `JOB-${dateStr}-${String(nextRunning).padStart(3, '0')}`;
     }
 
-    const finalImages: string[] = imageUrls.length > 0 
-      ? imageUrls 
-      : (Array.isArray(jsonImages) ? jsonImages : []);
-
     const isWarrantyBoolean = String(isWarranty) === 'true' || isWarranty === true;
     const jobStatus = inputStatus ? String(inputStatus) : 'PENDING';
 
@@ -350,11 +358,11 @@ export async function POST(request: Request) {
         ...(verifiedBrandId && { brandId: verifiedBrandId }),
         ...(verifiedBackupId && { backupDeviceId: verifiedBackupId }),
         ...(verifiedUserId && { userId: verifiedUserId }),
-        ...(finalImages.length > 0 && {
+        ...(structuredImages.length > 0 && {
           images: {
-            create: finalImages.map((url, index) => ({ 
-              url, 
-              type: index === 0 ? 'NAMEPLATE' : 'FAULT_BOARD'
+            create: structuredImages.map((img) => ({ 
+              url: img.url, 
+              type: img.type // 🌟 บันทึกประเภท NAMEPLATE และ OTHER อย่างแม่นยำ
             })),
           },
         }),
@@ -362,7 +370,6 @@ export async function POST(request: Request) {
     });
 
     // 🌟 7. เงื่อนไขอัตโนมัติ: หากเป็น CLAIM_NEW_MACHINE และหมวดหมู่เป็น อินเวอร์เตอร์ หรือ แบตเตอรี่
-    // ให้นำเครื่องเสียบันทึกเข้าคลังเครื่องสำรองในสถานะ MAINTENANCE โดยไม่ใส่ชื่อลูกค้า/เบอร์โทร และโคลนรูปภาพทั้งหมดติดไป
     const cleanCategory = category ? String(category).trim().toLowerCase() : '';
     const isTargetCategory = 
       cleanCategory.includes('อินเวอร์เตอร์') || 
@@ -377,9 +384,9 @@ export async function POST(request: Request) {
         });
 
         if (!existingBackup) {
-          const nameplateUrl = finalImages.length > 0 ? finalImages[0] : null;
+          const nameplateImgObj = structuredImages.find(img => img.type === 'NAMEPLATE');
+          const nameplateUrl = nameplateImgObj ? nameplateImgObj.url : (structuredImages.length > 0 ? structuredImages[0].url : null);
 
-          // สร้างเรคคอร์ดเครื่องสำรองในสถานะรอซ่อม (MAINTENANCE) โดยเว้นชื่อลูกค้าและเบอร์โทรไว้
           const newBackupDevice = await prisma.backupDevice.create({
             data: {
               category: String(category),
@@ -388,8 +395,8 @@ export async function POST(request: Request) {
               serialNumber: String(serialNumber).trim(),
               productNo: productNo ? String(productNo) : null,
               status: 'MAINTENANCE',
-              customerName: null, // เว้นว่างไว้เพื่อไม่ให้เข้าใจผิดว่าถูกยืม
-              phone: null,        // เว้นว่างไว้เพื่อไม่ให้เข้าใจผิดว่าถูกยืม
+              customerName: null,
+              phone: null,
               note: `รับเข้าจากเคสเคลมเครื่องใหม่ (ลูกค้าเดิม: ${customerName} - โทร: ${phone || 'ไม่ระบุ'} | Job No: ${newJob.jobNo})`,
               hasBox: String(hasBox) === 'true' || hasBox === 'on',
               hasWifiDongle: String(hasWifiDongle) === 'true' || hasWifiDongle === 'on',
@@ -400,13 +407,12 @@ export async function POST(request: Request) {
             }
           });
 
-          // โคลนรูปภาพหลักฐานทั้งหมด (ถ้ามี) แนบเข้ากับตารางรูปภาพของเครื่องสำรอง
-          if (finalImages.length > 0) {
+          if (structuredImages.length > 0) {
             await prisma.backupDeviceImage.createMany({
-              data: finalImages.map((imgUrl, idx) => ({
+              data: structuredImages.map((img) => ({
                 backupDeviceId: newBackupDevice.id,
-                url: imgUrl,
-                type: idx === 0 ? 'NAMEPLATE' : 'OTHER',
+                url: img.url,
+                type: img.type,
               }))
             });
           }

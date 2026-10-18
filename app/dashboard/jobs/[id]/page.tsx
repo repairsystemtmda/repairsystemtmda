@@ -425,6 +425,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
         return `/uploads/${filename}`;
       };
 
+      // 📌 [แก้ไขจุดนี้] ตรวจสอบว่ามีการอัปโหลดไฟล์เนมเพลทใหม่จริงหรือไม่
       const nameplateFile = formData.get('nameplateImages') as File;
       if (nameplateFile && nameplateFile instanceof File && nameplateFile.size > 0) {
         await prisma.jobImage.deleteMany({
@@ -799,6 +800,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
               </h3>
               <Link
                 href={`/dashboard/jobs/${id}`}
+                replace
                 className="text-gray-400 hover:text-gray-600 text-sm font-bold p-1 rounded-lg no-underline"
               >
                 ✕
@@ -831,6 +833,7 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
               <div className="flex items-center justify-end gap-3 pt-2">
                 <Link
                   href={`/dashboard/jobs/${id}`}
+                  replace
                   className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm rounded-xl transition no-underline"
                 >
                   ยกเลิก

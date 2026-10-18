@@ -180,12 +180,27 @@ export async function updateBackupDevice(id: string, formData: FormData) {
       });
     }
 
-    // 🌟 อัปโหลดรูปภาพหลักของเครื่องสำรองขึ้น Supabase Storage แทน local disk
+    // 🌟 อัปโหลดรูปภาพหลักของเครื่องสำรองขึ้น Supabase Storage
     const imageFile = formData.get('image') as File | null;
     let imageUrlUpdate = {};
     if (imageFile && imageFile.size > 0) {
       const publicUrl = await uploadFileToSupabase(imageFile, 'nameplates');
       imageUrlUpdate = { imageUrl: publicUrl };
+    }
+
+    // 🌟 ส่วนที่เพิ่มเข้ามา: อัปโหลดรูปภาพสภาพเครื่อง/รูปอื่นๆ (`otherImages`) ขึ้น Supabase Storage และบันทึกลงตาราง BackupDeviceImage
+    const otherImageFiles = formData.getAll('otherImages') as File[];
+    for (const imgFile of otherImageFiles) {
+      if (imgFile && imgFile instanceof File && imgFile.size > 0) {
+        const publicUrl = await uploadFileToSupabase(imgFile, 'conditions');
+        await prisma.backupDeviceImage.create({
+          data: {
+            url: publicUrl,
+            type: 'CONDITION',
+            backupDeviceId: id,
+          }
+        });
+      }
     }
 
     // 🌟 กำหนดค่าอัปเดตข้อมูลเครื่องสำรอง พร้อมบันทึกชื่อผู้ทำรายการเป็น adminTMDA
@@ -322,7 +337,7 @@ export async function addBackupDeviceStockLog(deviceId: string, formData: FormDa
       }
     });
 
-    // 🌟 อัปโหลดรูปภาพหลักฐานการเบิกอะไหล่ขึ้น Supabase Storage แทน local disk
+    // 🌟 อัปโหลดรูปภาพหลักฐานการเบิกอะไหล่ขึ้น Supabase Storage
     const imageFiles = formData.getAll('images') as File[];
     for (const imgFile of imageFiles) {
       if (imgFile && imgFile.size > 0) {

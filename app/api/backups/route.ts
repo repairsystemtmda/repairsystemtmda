@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
 
+// GET: ดึงรายการไฟล์สำรองข้อมูลทั้งหมดในเครื่อง
 export async function GET() {
   try {
     const backupDir = path.join(process.cwd(), "prisma", "backups");
@@ -12,7 +14,7 @@ export async function GET() {
 
     const filenames = fs.readdirSync(backupDir);
     const files = filenames
-      .filter((file) => file.endsWith('.db') || file.endsWith('.sqlite'))
+      .filter((file) => file.endsWith('.json')) // รองรับไฟล์ JSON ที่สำรองจาก Supabase
       .map((file) => {
         const filePath = path.join(backupDir, file);
         const stats = fs.statSync(filePath);
@@ -31,11 +33,31 @@ export async function GET() {
   }
 }
 
+// POST: ดึงข้อมูลจาก Supabase มาสร้างไฟล์สำรอง (JSON) เก็บไว้ในคอมพิวเตอร์
 export async function POST() {
   try {
-    const dbPath = path.join(process.cwd(), "prisma", "dev.db");
-    const backupDir = path.join(process.cwd(), "prisma", "backups");
+    // 1. ดึงข้อมูลหลักทั้งหมดจาก Supabase ผ่าน Prisma
+    const jobs = await prisma.job.findMany({ 
+      include: { 
+        images: true, 
+        stockLogs: { include: { sparePart: true, images: true } },
+        brand: true,
+        backupDevice: true,
+        user: true
+      } 
+    });
+    const backupDevices = await prisma.backupDevice.findMany();
+    const brands = await prisma.brand.findMany();
 
+    const backupData = {
+      exportedAt: new Date().toISOString(),
+      jobs,
+      backupDevices,
+      brands,
+    };
+
+    // 2. เตรียมโฟลเดอร์สำหรับเก็บไฟล์สำรองในเครื่องคอมพิวเตอร์
+    const backupDir = path.join(process.cwd(), "prisma", "backups");
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
@@ -43,27 +65,21 @@ export async function POST() {
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-CA");
     const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, "-");
-    const backupFileName = `dev-${dateStr}_${timeStr}.db`;
+    const backupFileName = `supabase-backup-${dateStr}_${timeStr}.json`;
     const backupPath = path.join(backupDir, backupFileName);
 
-    if (!fs.existsSync(dbPath)) {
-      return NextResponse.json(
-        { success: false, message: "ไม่พบไฟล์ฐานข้อมูลหลัก" },
-        { status: 404 }
-      );
-    }
-
-    fs.copyFileSync(dbPath, backupPath);
+    // 3. เขียนข้อมูลลงไฟล์ JSON
+    fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2), "utf-8");
 
     return NextResponse.json({
       success: true,
-      message: "สำรองข้อมูลสำเร็จ",
+      message: "สำรองข้อมูลจาก Supabase สำเร็จ",
       filename: backupFileName,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Backup error:", error);
     return NextResponse.json(
-      { success: false, message: "เกิดข้อผิดพลาดในการสำรองข้อมูล" },
+      { success: false, message: "เกิดข้อผิดพลาดในการสำรองข้อมูล", error: error.message },
       { status: 500 }
     );
   }

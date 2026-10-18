@@ -22,7 +22,8 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCw,
-  Download
+  Download,
+  Loader2
 } from 'lucide-react';
 
 const CLEANED_STATUS_OPTIONS = [
@@ -54,6 +55,7 @@ const FIXED_CATEGORIES = [
 export default function JobEditForm({ job, brands, categories = [], backupDevices, statusLabels = {}, updateJobAction }: any) {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(job.status);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     const finishedStatuses = [
@@ -73,6 +75,8 @@ export default function JobEditForm({ job, brands, categories = [], backupDevice
       alert('⚠️ ไม่สามารถเปลี่ยนสถานะเป็น "ซ่อมเสร็จสิ้น" หรือสถานะส่งมอบได้ เนื่องจากยังไม่มีประวัติการเบิกอะไหล่ กรุณาเบิกอะไหล่อย่างน้อย 1 รายการก่อนครับ');
       return;
     }
+
+    setIsSubmitting(true);
   };
 
   const [hasBox, setHasBox] = useState(job.hasBox ?? false);
@@ -89,6 +93,7 @@ export default function JobEditForm({ job, brands, categories = [], backupDevice
     setWifiDongleSn(job.wifiDongleSn || '');
     setSelectedCategory(job.category || '');
     setSelectedBrandId(job.brandId || '');
+    setIsSubmitting(false);
   }, [job.status, job.hasBox, job.hasWifiDongle, job.wifiDongleSn, job.category, job.brandId]);
 
   const filteredBrands = brands?.filter((b: any) => {
@@ -161,7 +166,9 @@ export default function JobEditForm({ job, brands, categories = [], backupDevice
     return `/uploads/${url}`;
   };
 
-  const allJobImages = job.images && job.images.length > 0 ? job.images : [];
+  const allJobImages = job.images && job.images.length > 0 
+    ? job.images.filter((img: any) => img && img.url && typeof img.url === 'string' && img.url.trim() !== '') 
+    : [];
   
   const nonStockImages = allJobImages.filter((img: any) => {
     if (img.stockLogId) return false;
@@ -171,19 +178,29 @@ export default function JobEditForm({ job, brands, categories = [], backupDevice
     return !isInStockLog;
   });
 
+  // กรองเฉพาะรูปที่เป็นเนมเพลทจริงๆ
   const explicitNameplate = nonStockImages.filter((img: any) => {
     const t = (img.type || '').toLowerCase();
     const c = (img.category || '').toLowerCase();
     return t.includes('nameplate') || c.includes('nameplate') || img.isNameplate === true || t.includes('serial') || c.includes('serial');
   });
 
-  const finalNameplateImages = explicitNameplate.length > 0 ? explicitNameplate : (nonStockImages.length > 0 ? [nonStockImages[0]] : []);
+  // ป้องกันกรณีข้อมูลเก่าไม่มี type ให้เช็คว่าเป็นรูปแรกสุดเฉพาะตอนไม่มี explicit type และไม่มีรูปอื่นปน หรือใช้เงื่อนไขตรงตามฐานข้อมูล
+  const finalNameplateImages = explicitNameplate.length > 0 
+    ? explicitNameplate 
+    : (nonStockImages.length > 0 && !nonStockImages.some((img: any) => img.type && img.type.trim() !== '')) 
+      ? [nonStockImages[0]] 
+      : [];
 
   const finalOtherImages = nonStockImages.filter((img: any) => {
+    if (!img || !img.url || typeof img.url !== 'string' || img.url.trim() === '') {
+      return false;
+    }
+    const t = (img.type || '').toLowerCase();
+    const c = (img.category || '').toLowerCase();
+    const isNameplate = t.includes('nameplate') || c.includes('nameplate') || img.isNameplate === true || t.includes('serial') || c.includes('serial');
+    
     if (explicitNameplate.length > 0) {
-      const t = (img.type || '').toLowerCase();
-      const c = (img.category || '').toLowerCase();
-      const isNameplate = t.includes('nameplate') || c.includes('nameplate') || img.isNameplate === true || t.includes('serial') || c.includes('serial');
       return !isNameplate;
     } else {
       return img.id !== finalNameplateImages[0]?.id && img.url !== finalNameplateImages[0]?.url;
@@ -206,7 +223,7 @@ export default function JobEditForm({ job, brands, categories = [], backupDevice
     });
     sparePartLogs.forEach((log: any) => {
       if (log.images) {
-        log.images.forEach((img: any, idx: number) => {
+        log.images.filter((img: any) => img && img.url && typeof img.url === 'string' && img.url.trim() !== '').forEach((img: any, idx: number) => {
           const u = getSafeImageUrl(img.url);
           const imgTypeLabel = idx === 0 ? 'บอร์ดตัวเก่าเต็มใบ' : 'QR Code / S/N';
           if (u) list.push({ url: u, label: `หลักฐานการเบิก: ${log.sparePart?.name || 'อะไหล่'} (${imgTypeLabel})` });
@@ -348,6 +365,7 @@ export default function JobEditForm({ job, brands, categories = [], backupDevice
               type="button"
               onClick={() => {
                 setIsEditing(false);
+                setIsSubmitting(false);
                 setSelectedStatus(job.status);
                 setHasBox(job.hasBox ?? false);
                 setHasWifiDongle(job.hasWifiDongle ?? false);
@@ -551,21 +569,23 @@ export default function JobEditForm({ job, brands, categories = [], backupDevice
           </select>
         </div>
 
-        <div className="w-full">
-          <label className="flex items-center gap-2 text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">
-            <Wifi className="w-4 h-4 text-gray-700 shrink-0" /> S/N WIFI DONGLE
-          </label>
-          <input 
-            type="text" 
-            name="wifiDongleSn" 
-            value={wifiDongleSn} 
-            onChange={(e) => setWifiDongleSn(e.target.value)}
-            disabled={!isEditing}
-            className={`w-full px-4 py-3 border rounded-xl text-base sm:text-sm font-mono font-semibold transition ${
-              isEditing ? 'bg-gray-50 border-gray-300 text-gray-900 focus:bg-white outline-none' : 'bg-gray-100 text-gray-600 border-gray-200 cursor-not-allowed'
-            }`} 
-          />
-        </div>
+        {hasWifiDongle && (
+          <div className="w-full">
+            <label className="flex items-center gap-2 text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">
+              <Wifi className="w-4 h-4 text-gray-700 shrink-0" /> S/N WIFI DONGLE
+            </label>
+            <input 
+              type="text" 
+              name="wifiDongleSn" 
+              value={wifiDongleSn} 
+              onChange={(e) => setWifiDongleSn(e.target.value)}
+              disabled={!isEditing}
+              className={`w-full px-4 py-3 border rounded-xl text-base sm:text-sm font-mono font-semibold transition ${
+                isEditing ? 'bg-gray-50 border-gray-300 text-gray-900 focus:bg-white outline-none' : 'bg-gray-100 text-gray-600 border-gray-200 cursor-not-allowed'
+              }`} 
+            />
+          </div>
+        )}
 
         <div className="md:col-span-2 lg:col-span-3 flex flex-col sm:flex-row items-start sm:items-center gap-4 py-3 px-4 bg-gray-50 rounded-xl border border-gray-200 w-full">
           <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -742,7 +762,7 @@ export default function JobEditForm({ job, brands, categories = [], backupDevice
               <div className="space-y-6">
                 {sparePartLogs.map((log: any, index: number) => {
                   const logKey = log.id || `log-${index}`;
-                  const logImages = log.images || [];
+                  const logImages = log.images ? log.images.filter((img: any) => img && img.url && typeof img.url === 'string' && img.url.trim() !== '') : [];
                   const fullBoardOldImg = logImages[0]; 
                   const qrCodeOldImg = logImages[1];    
 
@@ -935,9 +955,20 @@ export default function JobEditForm({ job, brands, categories = [], backupDevice
           <div className="md:col-span-2 lg:col-span-3 flex items-center justify-end gap-3 pt-4 border-t border-gray-100 w-full">
             <button
               type="submit"
-              className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold text-sm rounded-xl shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
             >
-              <CheckCircle2 className="w-5 h-5 shrink-0" /> บันทึกการเปลี่ยนแปลง
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5 shrink-0" />
+                  <span>บันทึกการเปลี่ยนแปลง</span>
+                </>
+              )}
             </button>
           </div>
         )}

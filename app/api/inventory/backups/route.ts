@@ -170,6 +170,21 @@ export async function POST(request: Request) {
     const imageUrl = bodyData.imageUrl || null;
     const additionalImages: string[] = Array.isArray(bodyData.images) ? bodyData.images : [];
 
+    // 🌟 รวบรวมและแยกประเภทรูปภาพให้อย่างถูกต้อง (NAMEPLATE และ OTHER)
+    const structuredImages: { url: string; type: string }[] = [];
+
+    if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') {
+      structuredImages.push({ url: imageUrl, type: 'NAMEPLATE' });
+    }
+
+    if (Array.isArray(additionalImages)) {
+      additionalImages.forEach((url) => {
+        if (url && typeof url === 'string' && url.trim() !== '') {
+          structuredImages.push({ url, type: 'OTHER' });
+        }
+      });
+    }
+
     // 🌟 บันทึกข้อมูลเครื่องสำรองใหม่ลงฐานข้อมูล
     const backupDevice = await prisma.backupDevice.create({
       data: {
@@ -189,11 +204,11 @@ export async function POST(request: Request) {
         userId: validUserId, 
         receiverId: validUserId,
         receiverName: receiverName,
-        ...(additionalImages.length > 0 && {
+        ...(structuredImages.length > 0 && {
           images: {
-            create: additionalImages.map((url) => ({
-              url,
-              type: 'CONDITION',
+            create: structuredImages.map((img) => ({
+              url: img.url,
+              type: img.type, // 🌟 แยกประเภท NAMEPLATE และ OTHER อย่างแม่นยำ
             })),
           },
         }),

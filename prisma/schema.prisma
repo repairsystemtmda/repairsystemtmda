@@ -17,7 +17,7 @@ model User {
   isActive      Boolean        @default(false)
   stockLogs     StockLog[]
   jobs          Job[]          @relation
-  backupDevices BackupDevice[] @relation // 📌 เพิ่มความสัมพันธ์กับ BackupDevice[cite: 8, 9]
+  backupDevices BackupDevice[] @relation // 📌 เพิ่มความสัมพันธ์กับ BackupDevice
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -181,7 +181,6 @@ model BackupDevice {
   wifiDongleSn   String?
   imageUrl       String?
   
-  // 📌 เพิ่มฟิลด์เชื่อมโยงผู้บันทึก (User)[cite: 8, 9]
   userId         String?
   user           User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -208,6 +207,7 @@ model TestVideo {
 }
 
 model SystemSetting {
-  id              String  @id @default("default")
-  lineOaSaveVideo Boolean @default(true)
+  id                  String  @id @default("default")
+  lineOaSaveVideo     Boolean @default(true)
+  lineOaAlertEnabled  Boolean @default(true) // 📌 เพิ่มฟิลด์ควบคุมการเปิด-ปิดแจ้งเตือนการเบิกอะไหล่ (ค่าเริ่มต้นคือ เปิดใช้งาน)
 }

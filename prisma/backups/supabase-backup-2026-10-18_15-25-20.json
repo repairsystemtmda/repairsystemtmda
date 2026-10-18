@@ -1,0 +1,654 @@
+{
+  "exportedAt": "2026-10-18T08:25:20.319Z",
+  "jobs": [
+    {
+      "id": "cmvdbh5sf000jrhp4d0gp9wep",
+      "jobNo": "BK-2506614451",
+      "status": "IN_REPAIR",
+      "category": null,
+      "brandId": null,
+      "model": "SUN-6K-SG05LP1",
+      "serialNumber": "2506614451",
+      "productNo": null,
+      "isWarranty": true,
+      "estimatedCost": null,
+      "approvalNotes": null,
+      "customerName": "[ซ่อมบำรุงในคลัง]",
+      "phone": null,
+      "receiverName": null,
+      "note": null,
+      "hasBox": false,
+      "hasWifiDongle": false,
+      "wifiDongleSn": null,
+      "deyeTrackingNo": null,
+      "returnTracking": null,
+      "closedAt": null,
+      "backupDeviceId": "cmvb4hapz0009gejjdi06wgow",
+      "userId": null,
+      "createdAt": "2026-10-18T04:19:59.247Z",
+      "updatedAt": "2026-10-18T04:19:59.247Z",
+      "images": [
+        {
+          "id": "cmvdbh6qk000orhp41m1m213h",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/board-withdraws/board-1792297196972-g8dgq.jpeg",
+          "type": null,
+          "jobId": "cmvdbh5sf000jrhp4d0gp9wep",
+          "stockLogId": "cmvdbh6kv000mrhp4a7vjoq4q",
+          "createdAt": "2026-10-18T04:20:00.477Z"
+        },
+        {
+          "id": "cmvdbh6te000qrhp4ya8l9vtb",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/board-withdraws/qr-1792297197609-6qlx4.jpeg",
+          "type": null,
+          "jobId": "cmvdbh5sf000jrhp4d0gp9wep",
+          "stockLogId": "cmvdbh6kv000mrhp4a7vjoq4q",
+          "createdAt": "2026-10-18T04:20:00.579Z"
+        }
+      ],
+      "stockLogs": [
+        {
+          "id": "cmvdbh6kv000mrhp4a7vjoq4q",
+          "sparePartId": "cmvcoohsq0000f08oo7vw8nh9",
+          "jobId": "cmvdbh5sf000jrhp4d0gp9wep",
+          "userId": null,
+          "quantity": -1,
+          "type": "USE_FOR_REPAIR",
+          "note": "เบิกอะไหล่ซ่อมพร้อมหลักฐาน",
+          "createdAt": "2026-10-18T04:20:00.272Z",
+          "sparePart": {
+            "id": "cmvcoohsq0000f08oo7vw8nh9",
+            "code": null,
+            "qrModelCode": null,
+            "boardModelCode": "20110104100245",
+            "boardSerialNumber": null,
+            "name": "IGBT",
+            "model": "",
+            "version": null,
+            "category": "Inverter",
+            "boardType": "IGBT_BOARD",
+            "boardTypeId": null,
+            "location": "D12",
+            "stock": 6,
+            "minQuantity": 5,
+            "brandId": null,
+            "createdAt": "2026-10-17T17:41:50.234Z",
+            "updatedAt": "2026-10-18T04:21:42.673Z"
+          },
+          "images": [
+            {
+              "id": "cmvdbh6qk000orhp41m1m213h",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/board-withdraws/board-1792297196972-g8dgq.jpeg",
+              "type": null,
+              "jobId": "cmvdbh5sf000jrhp4d0gp9wep",
+              "stockLogId": "cmvdbh6kv000mrhp4a7vjoq4q",
+              "createdAt": "2026-10-18T04:20:00.477Z"
+            },
+            {
+              "id": "cmvdbh6te000qrhp4ya8l9vtb",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/board-withdraws/qr-1792297197609-6qlx4.jpeg",
+              "type": null,
+              "jobId": "cmvdbh5sf000jrhp4d0gp9wep",
+              "stockLogId": "cmvdbh6kv000mrhp4a7vjoq4q",
+              "createdAt": "2026-10-18T04:20:00.579Z"
+            }
+          ]
+        }
+      ],
+      "brand": null,
+      "backupDevice": {
+        "id": "cmvb4hapz0009gejjdi06wgow",
+        "brandId": "cmv9t4ukk000013bv8pxhy6ov",
+        "model": "SUN-6K-SG05LP1",
+        "category": "อินเวอร์เตอร์",
+        "serialNumber": "2506614451",
+        "status": "MAINTENANCE",
+        "customerName": "[ซ่อมบำรุงในคลัง]",
+        "phone": null,
+        "productNo": "12586354425",
+        "note": null,
+        "hasBox": true,
+        "hasWifiDongle": false,
+        "wifiDongleSn": null,
+        "imageUrl": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-nameplate-1792164508687-375302957.jpg",
+        "userId": "cmv9sya7t000077iyi3ub06jd",
+        "receiverId": "cmv9sya7t000077iyi3ub06jd",
+        "receiverName": "adminTMDA",
+        "createdAt": "2026-10-16T15:28:35.976Z",
+        "updatedAt": "2026-10-18T07:03:26.635Z"
+      },
+      "user": null
+    },
+    {
+      "id": "cmvdbiuur000trhp4hrevkgkt",
+      "jobNo": "BK-JOB-970346",
+      "status": "IN_REPAIR",
+      "category": null,
+      "brandId": null,
+      "model": null,
+      "serialNumber": null,
+      "productNo": null,
+      "isWarranty": true,
+      "estimatedCost": null,
+      "approvalNotes": null,
+      "customerName": "ซ่อมเครื่องสำรอง: SUN-16K-SG04LP1-EU",
+      "phone": "-",
+      "receiverName": null,
+      "note": null,
+      "hasBox": false,
+      "hasWifiDongle": false,
+      "wifiDongleSn": null,
+      "deyeTrackingNo": null,
+      "returnTracking": null,
+      "closedAt": null,
+      "backupDeviceId": "cmvb3tii70005qq1497ybt6n1",
+      "userId": "cmv9sya7t000077iyi3ub06jd",
+      "createdAt": "2026-10-18T04:21:18.388Z",
+      "updatedAt": "2026-10-18T04:21:18.388Z",
+      "images": [
+        {
+          "id": "cmvdbiv0q000xrhp433kebl0m",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-withdraws/cmvb3tii70005qq1497ybt6n1/1792297277278-c2373d68-814e-4b11-9535-a9aab41ca5a6-LINE_NOTE_260914_12.jpg",
+          "type": "STOCK_LOG",
+          "jobId": "cmvdbiuur000trhp4hrevkgkt",
+          "stockLogId": "cmvdbiuyt000vrhp4toyop5ng",
+          "createdAt": "2026-10-18T04:21:18.602Z"
+        },
+        {
+          "id": "cmvdbiv2r000zrhp4q0g06xy8",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-withdraws/cmvb3tii70005qq1497ybt6n1/1792297277791-134b06b0-291c-4f4d-a70a-72a7d8c6b782-LINE_NOTE_260914_6.jpg",
+          "type": "STOCK_LOG",
+          "jobId": "cmvdbiuur000trhp4hrevkgkt",
+          "stockLogId": "cmvdbiuyt000vrhp4toyop5ng",
+          "createdAt": "2026-10-18T04:21:18.675Z"
+        },
+        {
+          "id": "cmvdbjdpd0014rhp4ailnr4kn",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-withdraws/cmvb3tii70005qq1497ybt6n1/1792297301381-a2e3c454-59d1-47c1-8508-767412b9f0f2-LINE_NOTE_260914_3.jpg",
+          "type": "STOCK_LOG",
+          "jobId": "cmvdbiuur000trhp4hrevkgkt",
+          "stockLogId": "cmvdbjdnf0012rhp42twki8c4",
+          "createdAt": "2026-10-18T04:21:42.817Z"
+        },
+        {
+          "id": "cmvdbjdrc0016rhp4cicece3l",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-withdraws/cmvb3tii70005qq1497ybt6n1/1792297301631-af579d4d-4840-4afc-a530-fc86a54ec5a9-LINE_NOTE_260914_4.jpg",
+          "type": "STOCK_LOG",
+          "jobId": "cmvdbiuur000trhp4hrevkgkt",
+          "stockLogId": "cmvdbjdnf0012rhp42twki8c4",
+          "createdAt": "2026-10-18T04:21:42.888Z"
+        }
+      ],
+      "stockLogs": [
+        {
+          "id": "cmvdbiuyt000vrhp4toyop5ng",
+          "sparePartId": "cmvcoohsq0000f08oo7vw8nh9",
+          "jobId": "cmvdbiuur000trhp4hrevkgkt",
+          "userId": "cmv9sya7t000077iyi3ub06jd",
+          "quantity": -1,
+          "type": "USE_FOR_REPAIR",
+          "note": "เบิกอะไหล่ซ่อมเครื่องสำรอง",
+          "createdAt": "2026-10-18T04:21:18.533Z",
+          "sparePart": {
+            "id": "cmvcoohsq0000f08oo7vw8nh9",
+            "code": null,
+            "qrModelCode": null,
+            "boardModelCode": "20110104100245",
+            "boardSerialNumber": null,
+            "name": "IGBT",
+            "model": "",
+            "version": null,
+            "category": "Inverter",
+            "boardType": "IGBT_BOARD",
+            "boardTypeId": null,
+            "location": "D12",
+            "stock": 6,
+            "minQuantity": 5,
+            "brandId": null,
+            "createdAt": "2026-10-17T17:41:50.234Z",
+            "updatedAt": "2026-10-18T04:21:42.673Z"
+          },
+          "images": [
+            {
+              "id": "cmvdbiv0q000xrhp433kebl0m",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-withdraws/cmvb3tii70005qq1497ybt6n1/1792297277278-c2373d68-814e-4b11-9535-a9aab41ca5a6-LINE_NOTE_260914_12.jpg",
+              "type": "STOCK_LOG",
+              "jobId": "cmvdbiuur000trhp4hrevkgkt",
+              "stockLogId": "cmvdbiuyt000vrhp4toyop5ng",
+              "createdAt": "2026-10-18T04:21:18.602Z"
+            },
+            {
+              "id": "cmvdbiv2r000zrhp4q0g06xy8",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-withdraws/cmvb3tii70005qq1497ybt6n1/1792297277791-134b06b0-291c-4f4d-a70a-72a7d8c6b782-LINE_NOTE_260914_6.jpg",
+              "type": "STOCK_LOG",
+              "jobId": "cmvdbiuur000trhp4hrevkgkt",
+              "stockLogId": "cmvdbiuyt000vrhp4toyop5ng",
+              "createdAt": "2026-10-18T04:21:18.675Z"
+            }
+          ]
+        },
+        {
+          "id": "cmvdbjdnf0012rhp42twki8c4",
+          "sparePartId": "cmvcoohsq0000f08oo7vw8nh9",
+          "jobId": "cmvdbiuur000trhp4hrevkgkt",
+          "userId": "cmv9sya7t000077iyi3ub06jd",
+          "quantity": -1,
+          "type": "USE_FOR_REPAIR",
+          "note": "เบิกอะไหล่ซ่อมเครื่องสำรอง",
+          "createdAt": "2026-10-18T04:21:42.747Z",
+          "sparePart": {
+            "id": "cmvcoohsq0000f08oo7vw8nh9",
+            "code": null,
+            "qrModelCode": null,
+            "boardModelCode": "20110104100245",
+            "boardSerialNumber": null,
+            "name": "IGBT",
+            "model": "",
+            "version": null,
+            "category": "Inverter",
+            "boardType": "IGBT_BOARD",
+            "boardTypeId": null,
+            "location": "D12",
+            "stock": 6,
+            "minQuantity": 5,
+            "brandId": null,
+            "createdAt": "2026-10-17T17:41:50.234Z",
+            "updatedAt": "2026-10-18T04:21:42.673Z"
+          },
+          "images": [
+            {
+              "id": "cmvdbjdpd0014rhp4ailnr4kn",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-withdraws/cmvb3tii70005qq1497ybt6n1/1792297301381-a2e3c454-59d1-47c1-8508-767412b9f0f2-LINE_NOTE_260914_3.jpg",
+              "type": "STOCK_LOG",
+              "jobId": "cmvdbiuur000trhp4hrevkgkt",
+              "stockLogId": "cmvdbjdnf0012rhp42twki8c4",
+              "createdAt": "2026-10-18T04:21:42.817Z"
+            },
+            {
+              "id": "cmvdbjdrc0016rhp4cicece3l",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-withdraws/cmvb3tii70005qq1497ybt6n1/1792297301631-af579d4d-4840-4afc-a530-fc86a54ec5a9-LINE_NOTE_260914_4.jpg",
+              "type": "STOCK_LOG",
+              "jobId": "cmvdbiuur000trhp4hrevkgkt",
+              "stockLogId": "cmvdbjdnf0012rhp42twki8c4",
+              "createdAt": "2026-10-18T04:21:42.888Z"
+            }
+          ]
+        }
+      ],
+      "brand": null,
+      "backupDevice": {
+        "id": "cmvb3tii70005qq1497ybt6n1",
+        "brandId": "cmv9t4ukk000013bv8pxhy6ov",
+        "model": "SUN-16K-SG04LP1-EU",
+        "category": "อินเวอร์เตอร์",
+        "serialNumber": "2506321478",
+        "status": "MAINTENANCE",
+        "customerName": null,
+        "phone": null,
+        "productNo": "1223558896888",
+        "note": null,
+        "hasBox": true,
+        "hasWifiDongle": false,
+        "wifiDongleSn": null,
+        "imageUrl": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-nameplate-1792163399913-801887898.jpg",
+        "userId": "cmv9sya7t000077iyi3ub06jd",
+        "receiverId": "cmv9sya7t000077iyi3ub06jd",
+        "receiverName": "adminTMDA",
+        "createdAt": "2026-10-16T15:10:06.319Z",
+        "updatedAt": "2026-10-16T15:10:06.319Z"
+      },
+      "user": {
+        "id": "cmv9sya7t000077iyi3ub06jd",
+        "email": "adminTMDA@inverter.com",
+        "username": "adminTMDA",
+        "password": "$2b$10$0xoz2oQiJRahAwxuGzL6huXhujm3r8feHZalJVpM2pmVNyZtSdxcK",
+        "name": "adminTMDA",
+        "role": "ADMIN",
+        "isActive": true,
+        "createdAt": "2026-10-15T17:18:06.904Z",
+        "updatedAt": "2026-10-15T17:18:06.904Z"
+      }
+    },
+    {
+      "id": "cmvb6830l0001rvm29kpm6agi",
+      "jobNo": "JOB-202610-001",
+      "status": "IN_REPAIR",
+      "category": "อินเวอร์เตอร์",
+      "brandId": "cmv9t4ukk000013bv8pxhy6ov",
+      "model": "SUN-6K-SG05LP1 ",
+      "serialNumber": "2504452687",
+      "productNo": "12547896658554",
+      "isWarranty": false,
+      "estimatedCost": null,
+      "approvalNotes": null,
+      "customerName": "TEST01",
+      "phone": "0855815124",
+      "receiverName": "adminTMDA",
+      "note": "",
+      "hasBox": true,
+      "hasWifiDongle": false,
+      "wifiDongleSn": null,
+      "deyeTrackingNo": null,
+      "returnTracking": null,
+      "closedAt": null,
+      "backupDeviceId": null,
+      "userId": "cmv9sya7t000077iyi3ub06jd",
+      "createdAt": "2026-10-16T16:17:25.317Z",
+      "updatedAt": "2026-10-18T07:20:11.197Z",
+      "images": [
+        {
+          "id": "cmvb6830l0002rvm272qwp1y3",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/job-1792167438570-0-576356427.jpg",
+          "type": "NAMEPLATE",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": null,
+          "createdAt": "2026-10-16T16:17:25.317Z"
+        },
+        {
+          "id": "cmvb6830l0003rvm2ed2k7uaj",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/job-1792167438550-1-469017976.jpg",
+          "type": "FAULT_BOARD",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": null,
+          "createdAt": "2026-10-16T16:17:25.317Z"
+        },
+        {
+          "id": "cmvb6830l0004rvm2xbuk4eg9",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/job-1792167438555-2-27535389.jpg",
+          "type": "FAULT_BOARD",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": null,
+          "createdAt": "2026-10-16T16:17:25.317Z"
+        },
+        {
+          "id": "cmvb6830l0005rvm2c763pf7y",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/job-1792167438564-3-858370538.jpg",
+          "type": "FAULT_BOARD",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": null,
+          "createdAt": "2026-10-16T16:17:25.317Z"
+        },
+        {
+          "id": "cmvb6830l0006rvm2fei4exk3",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/job-1792167438546-4-862570951.jpg",
+          "type": "FAULT_BOARD",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": null,
+          "createdAt": "2026-10-16T16:17:25.317Z"
+        },
+        {
+          "id": "cmvb6830l0007rvm2qwykwzs2",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/job-1792167438559-5-488457651.jpg",
+          "type": "FAULT_BOARD",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": null,
+          "createdAt": "2026-10-16T16:17:25.317Z"
+        },
+        {
+          "id": "cmvdbeizo0004rhp4c6wdmvdb",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/restock/cmvb6830l0001rvm29kpm6agi/1792297075024-1-LINE_NOTE_260914_3.jpg",
+          "type": "DUAL_IMAGE",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": "cmvdbeixn0002rhp4fgf9knnr",
+          "createdAt": "2026-10-18T04:17:56.389Z"
+        },
+        {
+          "id": "cmvdbej1p0006rhp4glg7mpfz",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/restock/cmvb6830l0001rvm29kpm6agi/1792297075894-2-LINE_NOTE_260914_4.jpg",
+          "type": "DUAL_IMAGE",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": "cmvdbeixn0002rhp4fgf9knnr",
+          "createdAt": "2026-10-18T04:17:56.461Z"
+        },
+        {
+          "id": "cmvdbg9o5000frhp48sdhvle6",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/board-withdraws/board-1792297155860-10ntr.jpeg",
+          "type": null,
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": "cmvdbg9m6000drhp4krqo37k5",
+          "createdAt": "2026-10-18T04:19:17.622Z"
+        },
+        {
+          "id": "cmvdbg9q7000hrhp4qlzb7ho5",
+          "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/board-withdraws/qr-1792297156342-vgg00.jpeg",
+          "type": null,
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": "cmvdbg9m6000drhp4krqo37k5",
+          "createdAt": "2026-10-18T04:19:17.695Z"
+        },
+        {
+          "id": "cmvdg25ph0001phqhh5rnsdjf",
+          "url": "/uploads/1792304897378-87012130-LINE_NOTE_260914_11.jpg",
+          "type": "OTHER",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": null,
+          "createdAt": "2026-10-18T06:28:17.381Z"
+        },
+        {
+          "id": "cmvdgoev00001i4o5v8e9buwq",
+          "url": "/uploads/1792305935673-510326144-LINE_NOTE_260914_12.jpg",
+          "type": "OTHER",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "stockLogId": null,
+          "createdAt": "2026-10-18T06:45:35.676Z"
+        }
+      ],
+      "stockLogs": [
+        {
+          "id": "cmvdbeixn0002rhp4fgf9knnr",
+          "sparePartId": "cmvb4kxza0001odaq1l7lyqr9",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "userId": "cmv9sya7t000077iyi3ub06jd",
+          "quantity": -1,
+          "type": "USE_FOR_REPAIR",
+          "note": "ตัดสต็อกอัตโนมัติสำหรับการซ่อมบำรุง",
+          "createdAt": "2026-10-18T04:17:56.315Z",
+          "sparePart": {
+            "id": "cmvb4kxza0001odaq1l7lyqr9",
+            "code": null,
+            "qrModelCode": null,
+            "boardModelCode": "1234567891234",
+            "boardSerialNumber": null,
+            "name": "WIFI_BOARD",
+            "model": "SUN-6K-SG05LP1 ",
+            "version": null,
+            "category": "Inverter",
+            "boardType": "WIFI_BOARD",
+            "boardTypeId": null,
+            "location": "L1",
+            "stock": 12,
+            "minQuantity": 8,
+            "brandId": null,
+            "createdAt": "2026-10-16T15:31:26.086Z",
+            "updatedAt": "2026-10-18T04:17:56.240Z"
+          },
+          "images": [
+            {
+              "id": "cmvdbeizo0004rhp4c6wdmvdb",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/restock/cmvb6830l0001rvm29kpm6agi/1792297075024-1-LINE_NOTE_260914_3.jpg",
+              "type": "DUAL_IMAGE",
+              "jobId": "cmvb6830l0001rvm29kpm6agi",
+              "stockLogId": "cmvdbeixn0002rhp4fgf9knnr",
+              "createdAt": "2026-10-18T04:17:56.389Z"
+            },
+            {
+              "id": "cmvdbej1p0006rhp4glg7mpfz",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/restock/cmvb6830l0001rvm29kpm6agi/1792297075894-2-LINE_NOTE_260914_4.jpg",
+              "type": "DUAL_IMAGE",
+              "jobId": "cmvb6830l0001rvm29kpm6agi",
+              "stockLogId": "cmvdbeixn0002rhp4fgf9knnr",
+              "createdAt": "2026-10-18T04:17:56.461Z"
+            }
+          ]
+        },
+        {
+          "id": "cmvdbg9m6000drhp4krqo37k5",
+          "sparePartId": "cmvcoohsq0000f08oo7vw8nh9",
+          "jobId": "cmvb6830l0001rvm29kpm6agi",
+          "userId": null,
+          "quantity": -1,
+          "type": "USE_FOR_REPAIR",
+          "note": "เบิกอะไหล่ซ่อมพร้อมหลักฐาน",
+          "createdAt": "2026-10-18T04:19:17.550Z",
+          "sparePart": {
+            "id": "cmvcoohsq0000f08oo7vw8nh9",
+            "code": null,
+            "qrModelCode": null,
+            "boardModelCode": "20110104100245",
+            "boardSerialNumber": null,
+            "name": "IGBT",
+            "model": "",
+            "version": null,
+            "category": "Inverter",
+            "boardType": "IGBT_BOARD",
+            "boardTypeId": null,
+            "location": "D12",
+            "stock": 6,
+            "minQuantity": 5,
+            "brandId": null,
+            "createdAt": "2026-10-17T17:41:50.234Z",
+            "updatedAt": "2026-10-18T04:21:42.673Z"
+          },
+          "images": [
+            {
+              "id": "cmvdbg9o5000frhp48sdhvle6",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/board-withdraws/board-1792297155860-10ntr.jpeg",
+              "type": null,
+              "jobId": "cmvb6830l0001rvm29kpm6agi",
+              "stockLogId": "cmvdbg9m6000drhp4krqo37k5",
+              "createdAt": "2026-10-18T04:19:17.622Z"
+            },
+            {
+              "id": "cmvdbg9q7000hrhp4qlzb7ho5",
+              "url": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/board-withdraws/qr-1792297156342-vgg00.jpeg",
+              "type": null,
+              "jobId": "cmvb6830l0001rvm29kpm6agi",
+              "stockLogId": "cmvdbg9m6000drhp4krqo37k5",
+              "createdAt": "2026-10-18T04:19:17.695Z"
+            }
+          ]
+        }
+      ],
+      "brand": {
+        "id": "cmv9t4ukk000013bv8pxhy6ov",
+        "name": "Deye",
+        "category": "อินเวอร์เตอร์",
+        "createdAt": "2026-10-15T17:23:13.220Z",
+        "updatedAt": "2026-10-15T17:23:13.220Z"
+      },
+      "backupDevice": null,
+      "user": {
+        "id": "cmv9sya7t000077iyi3ub06jd",
+        "email": "adminTMDA@inverter.com",
+        "username": "adminTMDA",
+        "password": "$2b$10$0xoz2oQiJRahAwxuGzL6huXhujm3r8feHZalJVpM2pmVNyZtSdxcK",
+        "name": "adminTMDA",
+        "role": "ADMIN",
+        "isActive": true,
+        "createdAt": "2026-10-15T17:18:06.904Z",
+        "updatedAt": "2026-10-15T17:18:06.904Z"
+      }
+    }
+  ],
+  "backupDevices": [
+    {
+      "id": "cmvb3tii70005qq1497ybt6n1",
+      "brandId": "cmv9t4ukk000013bv8pxhy6ov",
+      "model": "SUN-16K-SG04LP1-EU",
+      "category": "อินเวอร์เตอร์",
+      "serialNumber": "2506321478",
+      "status": "MAINTENANCE",
+      "customerName": null,
+      "phone": null,
+      "productNo": "1223558896888",
+      "note": null,
+      "hasBox": true,
+      "hasWifiDongle": false,
+      "wifiDongleSn": null,
+      "imageUrl": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-nameplate-1792163399913-801887898.jpg",
+      "userId": "cmv9sya7t000077iyi3ub06jd",
+      "receiverId": "cmv9sya7t000077iyi3ub06jd",
+      "receiverName": "adminTMDA",
+      "createdAt": "2026-10-16T15:10:06.319Z",
+      "updatedAt": "2026-10-16T15:10:06.319Z"
+    },
+    {
+      "id": "cmvb3vs3k0009qq14rio7dz91",
+      "brandId": "cmv9t4ukk000013bv8pxhy6ov",
+      "model": "SUN-6K-SG05LP1",
+      "category": "อินเวอร์เตอร์",
+      "serialNumber": "2508258759",
+      "status": "MAINTENANCE",
+      "customerName": null,
+      "phone": null,
+      "productNo": "12547896658554",
+      "note": null,
+      "hasBox": true,
+      "hasWifiDongle": false,
+      "wifiDongleSn": null,
+      "imageUrl": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-nameplate-1792163506138-127343440.jpg",
+      "userId": "cmv9sya7t000077iyi3ub06jd",
+      "receiverId": "cmv9sya7t000077iyi3ub06jd",
+      "receiverName": "adminTMDA",
+      "createdAt": "2026-10-16T15:11:52.064Z",
+      "updatedAt": "2026-10-16T15:35:40.189Z"
+    },
+    {
+      "id": "cmvb4hapz0009gejjdi06wgow",
+      "brandId": "cmv9t4ukk000013bv8pxhy6ov",
+      "model": "SUN-6K-SG05LP1",
+      "category": "อินเวอร์เตอร์",
+      "serialNumber": "2506614451",
+      "status": "MAINTENANCE",
+      "customerName": "[ซ่อมบำรุงในคลัง]",
+      "phone": null,
+      "productNo": "12586354425",
+      "note": null,
+      "hasBox": true,
+      "hasWifiDongle": false,
+      "wifiDongleSn": null,
+      "imageUrl": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-nameplate-1792164508687-375302957.jpg",
+      "userId": "cmv9sya7t000077iyi3ub06jd",
+      "receiverId": "cmv9sya7t000077iyi3ub06jd",
+      "receiverName": "adminTMDA",
+      "createdAt": "2026-10-16T15:28:35.976Z",
+      "updatedAt": "2026-10-18T07:03:26.635Z"
+    },
+    {
+      "id": "cmvb3r06h0001qq143pl80fn4",
+      "brandId": "cmv9t4ukk000013bv8pxhy6ov",
+      "model": "SUN-10K-SG04LP1-EU",
+      "category": "อินเวอร์เตอร์",
+      "serialNumber": "2506325896",
+      "status": "AVAILABLE",
+      "customerName": null,
+      "phone": null,
+      "productNo": "1223558896888",
+      "note": null,
+      "hasBox": true,
+      "hasWifiDongle": false,
+      "wifiDongleSn": null,
+      "imageUrl": "https://xtvixjjniwlbbsptvzry.supabase.co/storage/v1/object/public/repair-images/backup-nameplate-1792163283184-515049041.jpg",
+      "userId": "cmv9sya7t000077iyi3ub06jd",
+      "receiverId": "cmv9sya7t000077iyi3ub06jd",
+      "receiverName": "adminTMDA",
+      "createdAt": "2026-10-16T15:08:09.257Z",
+      "updatedAt": "2026-10-17T15:37:13.873Z"
+    }
+  ],
+  "brands": [
+    {
+      "id": "cmv9t4ukk000013bv8pxhy6ov",
+      "name": "Deye",
+      "category": "อินเวอร์เตอร์",
+      "createdAt": "2026-10-15T17:23:13.220Z",
+      "updatedAt": "2026-10-15T17:23:13.220Z"
+    },
+    {
+      "id": "cmvalddpz00002omm7uipod33",
+      "name": "TMDA",
+      "category": "อินเวอร์เตอร์",
+      "createdAt": "2026-10-16T06:33:40.536Z",
+      "updatedAt": "2026-10-16T06:33:40.536Z"
+    }
+  ]
+}

@@ -36,7 +36,10 @@ export default async function Page() {
     ? await prisma.user.findUnique({ where: { email: currentUserEmail } }) 
     : null;
 
-  const isAdmin = currentUser?.role === 'ADMIN';
+  const role = (currentUser?.role || '').toUpperCase();
+  const isAdmin = role === 'ADMIN';
+  const isManager = role === 'MANAGER' || role === 'MANGER';
+  const isTechnician = !isAdmin && !isManager; // ช่างทั่วไปหรือบทบาทอื่นๆ
 
   const rawJobs = await prisma.job.findMany({
     orderBy: { createdAt: 'desc' },
@@ -186,6 +189,26 @@ export default async function Page() {
     const jobDate = new Date(job.closedAt || job.createdAt);
     return !isNaN(jobDate.getTime()) && jobDate.getDate() === currentDay && jobDate.getMonth() === currentMonth && jobDate.getFullYear() === currentYear;
   }).length;
+
+  // คำนวณสถิติรายเดือนย้อนหลัง 6 เดือนสำหรับ Admin และ Manager
+  const monthlyStats: { [key: string]: number } = {};
+  const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(currentYear, currentMonth - i, 1);
+    const mKey = `${monthNames[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
+    monthlyStats[mKey] = 0;
+  }
+
+  jobs.forEach(job => {
+    const jobDate = new Date(job.createdAt);
+    if (!isNaN(jobDate.getTime())) {
+      const mKey = `${monthNames[jobDate.getMonth()]} ${String(jobDate.getFullYear()).slice(-2)}`;
+      if (monthlyStats[mKey] !== undefined) {
+        monthlyStats[mKey] += 1;
+      }
+    }
+  });
+  const maxMonthlyCount = Math.max(...Object.values(monthlyStats), 1);
 
   let backupAvailable = 0;
   let backupBorrowed = 0;
@@ -431,7 +454,7 @@ export default async function Page() {
           )}
         </div>
 
-        {/* 1. สถานะงานซ่อมของลูกค้า (ทุกคนเห็น) */}
+        {/* 1. สถานะงานซ่อมของลูกค้า (ทุกคนเห็น: Admin, Manager, Technician) */}
         <div>
           <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
             <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 shrink-0" /> สถานะงานซ่อมของลูกค้า (รวมทั้งหมด {totalJobs} เครื่อง)
@@ -629,7 +652,50 @@ export default async function Page() {
           </div>
         )}
 
-        {/* 3. สถานะเครื่องสำรอง (ทุกคนเห็น) */}
+        {/* 🔒 ส่วนสำหรับ ADMIN และ MANAGER: สถิติรายเดือน (ย้ายมาไว้หลังสถิติงานซ่อมเครื่องลูกค้า) */}
+        {(isAdmin || isManager) && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 space-y-4">
+            <h2 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 shrink-0" /> สถิติรายเดือน
+            </h2>
+            
+            <div className="pt-4">
+              <div className="flex items-end justify-around gap-2 sm:gap-4 h-64 border-b border-gray-200 pb-2 px-2">
+                {Object.entries(monthlyStats).map(([monthKey, count]) => {
+                  const heightPercent = Math.round((count / maxMonthlyCount) * 100);
+                  
+                  return (
+                    <div key={monthKey} className="flex flex-col items-center flex-1 h-full justify-end group relative">
+                      
+                      {/* Tooltip เมื่อเอาเมาส์ไปชี้ */}
+                      <div className="absolute -top-14 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-gray-900 text-white text-[11px] rounded-lg py-1.5 px-3 shadow-xl whitespace-nowrap z-20 pointer-events-none flex flex-col items-center">
+                        <span className="font-bold">{monthKey}</span>
+                        <span className="text-blue-300 font-semibold">จำนวนแจ้งซ่อม: {count}</span>
+                      </div>
+
+                      {/* ตัวเลขจำนวนบนแท่งกราฟ */}
+                      <span className="text-[10px] sm:text-xs font-bold text-gray-600 mb-1">
+                        {count > 0 ? count : ''}
+                      </span>
+
+                      {/* แท่งกราฟ */}
+                      <div className="w-full max-w-[45px] sm:max-w-[60px] bg-blue-500 rounded-t-lg transition-all duration-500 hover:bg-blue-600 flex items-end justify-center shadow-sm"
+                           style={{ height: `${Math.max(heightPercent, 4)}%` }}>
+                      </div>
+
+                      {/* ชื่อเดือนใต้กราฟ */}
+                      <span className="text-[10px] sm:text-xs font-semibold text-gray-700 mt-2 text-center whitespace-nowrap">
+                        {monthKey}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. สถานะเครื่องสำรอง (ทุกคนเห็น: Admin, Manager, Technician) */}
         <div>
           <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
             <HardDrive className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 shrink-0" /> สถานะเครื่องสำรอง (Backup Devices รวม {backupDevices.length} เครื่อง)
@@ -805,7 +871,7 @@ export default async function Page() {
               </div>
             </div>
 
-            {/* 6. สถิติ KPI ช่างซ่อม */}
+            {/* 6. สถิติ KPI ช่างซ่อม (แสดงผลเฉพาะ Admin เท่านั้น) */}
             <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 sm:p-6 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 gap-3">
                 <div className="flex items-center gap-2">

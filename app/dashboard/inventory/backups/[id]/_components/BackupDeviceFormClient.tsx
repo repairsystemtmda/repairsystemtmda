@@ -147,6 +147,8 @@ export default function BackupDeviceFormClient({
   const [hasBox, setHasBox] = useState(device.hasBox || false);
   const [hasWifiDongle, setHasWifiDongle] = useState(device.hasWifiDongle || false);
 
+  const [newNameplateFile, setNewNameplateFile] = useState<File | null>(null);
+  const [newNameplatePreview, setNewNameplatePreview] = useState<string | null>(null);
   const [newOtherImages, setNewOtherImages] = useState<File[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
   const [deletedStockLogImageIds, setDeletedStockLogImageIds] = useState<string[]>([]);
@@ -176,7 +178,9 @@ export default function BackupDeviceFormClient({
 
   const collectAllImagesForGallery = () => {
     const list: string[] = [];
-    if (device.imageUrl) {
+    if (newNameplatePreview) {
+      list.push(newNameplatePreview);
+    } else if (device.imageUrl && !deletedImageIds.includes('nameplate')) {
       const u = getSafeImageUrl(device.imageUrl);
       if (u) list.push(u);
     }
@@ -340,6 +344,15 @@ export default function BackupDeviceFormClient({
       alert('บันทึกไม่สำเร็จ: ' + (error?.message || 'เกิดข้อผิดพลาด'));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleNameplateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNewNameplateFile(file);
+      setNewNameplatePreview(URL.createObjectURL(file));
+      setDeletedImageIds(prev => prev.filter(id => id !== 'nameplate'));
     }
   };
 
@@ -625,9 +638,23 @@ export default function BackupDeviceFormClient({
 
             setIsSubmitting(true);
             try {
-              const formData = new FormData(e.currentTarget);
+              const formEl = e.currentTarget;
+              const formData = new FormData(formEl);
+              
+              // แนบไฟล์รูปเนมเพลท (ถ้ามีเลือกไว้ใหม่)
+              if (newNameplateFile) {
+                formData.set('image', newNameplateFile);
+              }
+
+              // แนบไฟล์รูปภาพอื่นๆ เพิ่มเติม (ถ้ามี)
+              newOtherImages.forEach((file) => {
+                formData.append('otherImages', file);
+              });
+
               await updateAction(device.id, formData);
               
+              setNewNameplateFile(null);
+              setNewNameplatePreview(null);
               setNewOtherImages([]);
               setDeletedImageIds([]);
               setDeletedStockLogImageIds([]);
@@ -668,6 +695,8 @@ export default function BackupDeviceFormClient({
                   type="button"
                   onClick={() => {
                     setIsEditing(false);
+                    setNewNameplateFile(null);
+                    setNewNameplatePreview(null);
                     setNewOtherImages([]);
                     setDeletedImageIds([]);
                     setDeletedStockLogImageIds([]);
@@ -880,14 +909,50 @@ export default function BackupDeviceFormClient({
                 <label className="block text-xs md:text-sm font-extrabold text-gray-900 uppercase tracking-wide">
                   🖼️ รูปถ่ายเนมเพลท / ป้าย S/N เครื่องสำรอง
                 </label>
-                {device.imageUrl ? (
+
+                {newNameplatePreview ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-blue-600">📌 รูปเนมเพลทใหม่ที่เลือก:</p>
+                    <div className="relative rounded-lg overflow-hidden border-2 border-blue-400 bg-white max-w-xs">
+                      <img src={newNameplatePreview} alt="New Nameplate" className="w-full h-36 object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={() => { setNewNameplateFile(null); setNewNameplatePreview(null); }} 
+                        className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-md text-xs cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : device.imageUrl && !deletedImageIds.includes('nameplate') ? (
                   <div className="relative rounded-lg overflow-hidden border-2 border-gray-200 bg-white max-w-xs">
                     <div onClick={() => openGalleryAt(getSafeImageUrl(device.imageUrl!))} className="cursor-pointer group relative block">
                       <img src={getSafeImageUrl(device.imageUrl)} alt="Nameplate" className="w-full h-36 object-cover group-hover:opacity-90 transition" />
                     </div>
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => toggleDeleteImage('nameplate')}
+                        className="absolute top-1 right-1 p-1 rounded-md bg-red-600 hover:bg-red-700 text-white text-xs flex items-center gap-1 z-10 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> ลบรูป
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 italic">ไม่มีรูปถ่ายเนมเพลท / ป้าย S/N</p>
+                )}
+
+                {isEditing && (
+                  <div className="pt-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">เปลี่ยนหรืออัปโหลดรูปเนมเพลท</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleNameplateChange}
+                      className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 cursor-pointer"
+                    />
+                  </div>
                 )}
               </div>
             )}
@@ -913,7 +978,7 @@ export default function BackupDeviceFormClient({
                             <button
                               type="button"
                               onClick={() => toggleDeleteImage(img.id)}
-                              className={`absolute top-1 right-1 p-1 rounded-md text-white text-xs flex items-center gap-1 z-10 ${isDeleted ? 'bg-blue-600' : 'bg-red-600 hover:bg-red-700'}`}
+                              className={`absolute top-1 right-1 p-1 rounded-md text-white text-xs flex items-center gap-1 z-10 cursor-pointer ${isDeleted ? 'bg-blue-600' : 'bg-red-600 hover:bg-red-700'}`}
                             >
                               <Trash2 className="w-3.5 h-3.5" /> {isDeleted ? 'ยกเลิก' : 'ลบ'}
                             </button>
@@ -1015,7 +1080,7 @@ export default function BackupDeviceFormClient({
                                         <button
                                           type="button"
                                           onClick={() => toggleDeleteStockLogImage(fullBoardImg.id)}
-                                          className={`absolute top-1 right-1 p-1 rounded-md text-white text-xs flex items-center gap-1 z-10 ${isFullBoardDeleted ? 'bg-blue-600' : 'bg-red-600 hover:bg-red-700'}`}
+                                          className={`absolute top-1 right-1 p-1 rounded-md text-white text-xs flex items-center gap-1 z-10 cursor-pointer ${isFullBoardDeleted ? 'bg-blue-600' : 'bg-red-600 hover:bg-red-700'}`}
                                         >
                                           <Trash2 className="w-3.5 h-3.5" /> {isFullBoardDeleted ? 'ยกเลิก' : 'ลบ'}
                                         </button>
@@ -1040,7 +1105,7 @@ export default function BackupDeviceFormClient({
                                         <button
                                           type="button"
                                           onClick={() => toggleDeleteStockLogImage(qrCodeImg.id)}
-                                          className={`absolute top-1 right-1 p-1 rounded-md text-white text-xs flex items-center gap-1 z-10 ${isQrCodeDeleted ? 'bg-blue-600' : 'bg-red-600 hover:bg-red-700'}`}
+                                          className={`absolute top-1 right-1 p-1 rounded-md text-white text-xs flex items-center gap-1 z-10 cursor-pointer ${isQrCodeDeleted ? 'bg-blue-600' : 'bg-red-600 hover:bg-red-700'}`}
                                         >
                                           <Trash2 className="w-3.5 h-3.5" /> {isQrCodeDeleted ? 'ยกเลิก' : 'ลบ'}
                                         </button>
@@ -1073,6 +1138,8 @@ export default function BackupDeviceFormClient({
                 type="button"
                 onClick={() => {
                   setIsEditing(false);
+                  setNewNameplateFile(null);
+                  setNewNameplatePreview(null);
                   setNewOtherImages([]);
                   setDeletedImageIds([]);
                   setDeletedStockLogImageIds([]);

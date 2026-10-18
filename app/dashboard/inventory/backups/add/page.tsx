@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Box, Wifi, Upload, FileText, X, ScanLine, Tag, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Box, Wifi, Upload, FileText, X, ScanLine, Tag, Loader2, AlertTriangle } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 // กำหนดค่า Supabase Client สำหรับอัปโหลดตรงฝั่งหน้าบ้าน
@@ -23,6 +23,12 @@ export default function AddBackupDevicePage() {
 
   const [uploadProgress, setUploadProgress] = useState(0);
   const [loadingText, setLoadingText] = useState('กำลังเตรียมข้อมูล...');
+
+  // State สำหรับจัดการ Modal แจ้งเตือนรูปแนวตั้ง
+  const [orientationAlert, setOrientationAlert] = useState<{ show: boolean; message: string }>({
+    show: false,
+    message: '',
+  });
 
   const [category, setCategory] = useState("อินเวอร์เตอร์");
   const [brandsList, setBrandsList] = useState<BrandItem[]>([]);
@@ -97,6 +103,34 @@ export default function AddBackupDevicePage() {
     return selectedBrand;
   };
 
+  // ฟังก์ชันตรวจสอบรูปภาพว่าเป็น "แนวนอน" หรือไม่ (Width ต้องมากกว่า Height)
+  const handleNameplateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        // เช็กว่าหากความกว้างน้อยกว่าหรือเท่ากับความสูง (แนวตั้ง หรือ จัตุรัส)
+        if (img.width <= img.height) {
+          setOrientationAlert({
+            show: true,
+            message: `รูปเนมเพลท (${file.name}) ที่คุณเลือกเป็น "แนวตั้งหรือจัตุรัส" กรุณาหมุนโทรศัพท์และถ่ายภาพใน "แนวนอน" เท่านั้นครับ`,
+          });
+          e.target.value = ''; //รีเซ็ตค่า input file
+        } else {
+          // ผ่านเงื่อนไข เป็นแนวนอน
+          setNameplateFile(file);
+          e.target.value = '';
+        }
+      };
+    };
+  };
+
   const resizeImage = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.7): Promise<File> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -158,7 +192,7 @@ export default function AddBackupDevicePage() {
     const requiresNameplate = (category === "อินเวอร์เตอร์" || category === "Inverter") && (currentBrand.toLowerCase() === 'deye' || currentBrand.toLowerCase() === 'tmda');
     
     if (requiresNameplate && !nameplateFile) {
-      alert("กรุณาแนบรูปถ่ายเนมเพลท (Nameplate / ป้าย S/N)");
+      alert("กรุณาแนบรูปถ่ายเนมเพลท (Nameplate / ป้าย S/N) ในแนวนอน");
       return;
     }
 
@@ -186,7 +220,7 @@ export default function AddBackupDevicePage() {
       let imageUrl: string | null = null;
       const uploadedImages: string[] = [];
 
-      // 1. อัปโหลดรูปเนมเพลทตรงไปยัง Supabase Storage (ถ้ามี)[cite: 7]
+      // 1. อัปโหลดรูปเนมเพลทตรงไปยัง Supabase Storage (ถ้ามี)
       if (nameplateFile) {
         setUploadProgress(30);
         setLoadingText("กำลังบีบอัดและอัปโหลดรูปเนมเพลท...");
@@ -208,7 +242,7 @@ export default function AddBackupDevicePage() {
         imageUrl = publicUrlData.publicUrl;
       }
 
-      // 2. อัปโหลดรูปภาพสภาพเครื่องเพิ่มเติมตรงไปยัง Supabase Storage แบบ Parallel Upload (พร้อมกันทีเดียว)[cite: 7]
+      // 2. อัปโหลดรูปภาพสภาพเครื่องเพิ่มเติมตรงไปยัง Supabase Storage แบบ Parallel Upload (พร้อมกันทีเดียว)
       if (selectedFiles.length > 0) {
         setUploadProgress(50);
         setLoadingText("กำลังบีบอัดและอัปโหลดรูปภาพหลักฐาน...");
@@ -232,7 +266,6 @@ export default function AddBackupDevicePage() {
           return publicUrlData.publicUrl;
         });
 
-        // รอให้อัปโหลดทุกรูปเสร็จพร้อมกันในรอบเดียว
         const results = await Promise.all(uploadPromises);
         uploadedImages.push(...results);
       }
@@ -240,7 +273,6 @@ export default function AddBackupDevicePage() {
       setUploadProgress(80);
       setLoadingText("กำลังบันทึกข้อมูลเข้าสู่ระบบ...");
 
-      // ส่งข้อมูลในรูปแบบ JSON ไปยัง API[cite: 7]
       const payload = {
         status: deviceStatus,
         category,
@@ -299,6 +331,33 @@ export default function AddBackupDevicePage() {
   return (
     <div className="min-h-screen bg-gray-50 py-4 px-3 sm:p-6 w-full font-sans relative">
       
+      {/* Modal แจ้งเตือนเมื่อพบรูปแนวตั้ง */}
+      {orientationAlert.show && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 sm:p-8 w-full max-w-sm text-center space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="w-20 h-20 mx-auto bg-amber-50 rounded-full flex items-center justify-center border border-amber-100 shadow-inner">
+              <AlertTriangle className="w-10 h-10 text-amber-500 animate-bounce" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">ตรวจพบรูปแนวตั้ง!</h3>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed px-1">
+                {orientationAlert.message}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setOrientationAlert({ show: false, message: '' })}
+              className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl text-sm transition shadow-lg shadow-amber-500/30 cursor-pointer"
+            >
+              รับทราบ / ถ่ายใหม่
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 sm:p-8 w-full max-w-md text-center space-y-5">
@@ -569,11 +628,12 @@ export default function AddBackupDevicePage() {
               )}
             </div>
 
+            {/* ส่วนอัปโหลดรูปเนมเพลท พร้อมตรวจสอบแนวนอน (เปลี่ยนข้อความตามต้องการ) */}
             {isDeyeOrTmdaInverter && (
               <div className="p-3.5 sm:p-4 bg-indigo-50/50 border border-indigo-200 rounded-xl space-y-2.5">
                 <label className="block text-xs sm:text-sm font-semibold text-indigo-900 flex items-center gap-1.5 leading-snug">
                   <Tag className="w-4 h-4 text-indigo-600 shrink-0" /> 
-                  <span>รูปเนมเพลท (Nameplate / ป้าย S/N) <span className="text-red-500">*</span></span>
+                  <span>รูปเนมเพลท (Nameplate / ป้าย S/N) <span className="text-red-500">* (ถ่ายรูปแนวนอนเท่านั้น)</span></span>
                 </label>
                 
                 {!nameplateFile ? (
@@ -582,23 +642,19 @@ export default function AddBackupDevicePage() {
                       type="file" 
                       accept="image/*" 
                       className="sr-only"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setNameplateFile(e.target.files[0]);
-                        }
-                      }}
+                      onChange={handleNameplateChange}
                     />
                     <div className="flex flex-col items-center justify-center space-y-1 pointer-events-none">
                       <Upload className="w-5 h-5 text-indigo-600" />
                       <div className="text-xs font-semibold text-indigo-900">
-                        <span>แตะเพื่อถ่ายรูป หรืออัปโหลดเนมเพลท</span>
+                        <span>แตะเพื่อถ่ายรูป หรืออัปโหลดเนมเพลท (ถ่ายรูปแนวนอนเท่านั้น)</span>
                       </div>
                     </div>
                   </label>
                 ) : (
                   <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-gray-600">รูปเนมเพลทที่เลือก (1 ไฟล์):</span>
+                      <span className="text-xs font-semibold text-gray-600">รูปเนมเพลทที่เลือก (ผ่านตรวจสอบแนวนอนแล้ว):</span>
                     </div>
                     <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-gray-200 text-xs shadow-sm">
                       <div className="flex items-center gap-2 truncate pr-2">

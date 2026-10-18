@@ -10,7 +10,11 @@ export async function GET() {
 
     if (!setting) {
       setting = await prisma.systemSetting.create({
-        data: { id: 'default', lineOaSaveVideo: true },
+        data: { 
+          id: 'default', 
+          lineOaSaveVideo: true,
+          lineOaAlertEnabled: true // 📌 เพิ่มค่าเริ่มต้น
+        },
       });
     }
 
@@ -25,12 +29,21 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { lineOaSaveVideo } = body;
+    const { lineOaSaveVideo, lineOaAlertEnabled } = body;
+
+    // เตรียม Object สำหรับอัปเดตเฉพาะค่าที่มีการส่งเข้ามา
+    const updateData: any = {};
+    if (lineOaSaveVideo !== undefined) updateData.lineOaSaveVideo = lineOaSaveVideo;
+    if (lineOaAlertEnabled !== undefined) updateData.lineOaAlertEnabled = lineOaAlertEnabled;
 
     const setting = await prisma.systemSetting.upsert({
       where: { id: 'default' },
-      update: { lineOaSaveVideo },
-      create: { id: 'default', lineOaSaveVideo },
+      update: updateData,
+      create: { 
+        id: 'default', 
+        lineOaSaveVideo: lineOaSaveVideo ?? true,
+        lineOaAlertEnabled: lineOaAlertEnabled ?? true
+      },
     });
 
     return NextResponse.json({ success: true, setting });

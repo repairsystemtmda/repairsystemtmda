@@ -31,7 +31,6 @@ export default async function InventoryPage({
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  // ตรวจสอบสิทธิ์ผู้ใช้งานปัจจุบันจากฐานข้อมูลจริง
   const session = await getServerSession(authOptions);
   const currentUserEmail = session?.user?.email;
   const currentUser = currentUserEmail 
@@ -40,7 +39,6 @@ export default async function InventoryPage({
 
   const isAdmin = currentUser?.role === 'ADMIN';
 
-  // 🌟 [Optimize] ดึงเฉพาะฟิลด์ stock และ minQuantity มานับจำนวนเหลือน้อย เพื่อความรวดเร็ว
   const allPartsForCount = await prisma.sparePart.findMany({
     select: { stock: true, minQuantity: true },
   });
@@ -72,12 +70,10 @@ export default async function InventoryPage({
     ],
   };
 
-  // หากเลือกตัวกรองอะไหล่เหลือน้อย
   let spareParts: any[] = [];
   let totalItems = 0;
 
   if (filter === 'low' && isAdmin) {
-    // กรณีดูเฉพาะเหลือน้อย ดึงทั้งหมดมา filter แล้วทำ Pagination แบบปลอดภัย
     const allFiltered = await prisma.sparePart.findMany({
       where: whereCondition,
       orderBy: { createdAt: 'desc' },
@@ -86,7 +82,6 @@ export default async function InventoryPage({
     totalItems = lowStockParts.length;
     spareParts = lowStockParts.slice(skip, skip + limit);
   } else {
-    // 🌟 [Optimize] ใช้ Database-level Pagination (skip & take) โหลดเฉพาะหน้าที่แสดงผลจริง ๆ
     const [fetchedParts, countResult] = await Promise.all([
       prisma.sparePart.findMany({
         where: whereCondition,
@@ -130,10 +125,10 @@ export default async function InventoryPage({
   }
 
   return (
-    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-5 pb-24">
+    <div className="p-3 sm:p-6 max-w-[96rem] mx-auto space-y-5 pb-24">
       
-      {/* ส่วนหัวหน้าเว็บ */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      {/* ส่วนหัวหน้าเว็บ ขยายความกว้างและจัดระเบียบปุ่มให้ขนาดเท่าเดิมและอยู่ในแถวเดียวกันบนจอใหญ่ */}
+      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-4">
         <div>
           <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Package className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 flex-shrink-0" /> ระบบจัดการคลังอะไหล่ (Inventory)
@@ -141,14 +136,15 @@ export default async function InventoryPage({
           <p className="text-xs sm:text-sm text-gray-600 mt-1 font-medium">จัดการสต็อก ตรวจสอบบอร์ด และบันทึกความเคลื่อนไหว</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+        {/* ส่วนปุ่มควบคุมด้านขวา */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {isAdmin && (
             <FilterLinkButton
               href={`/dashboard/inventory/boards?query=${query}&category=${category}&boardType=${boardType}&filter=low`}
               label={`อะไหล่เหลือน้อย (${lowStockTotal})`}
               icon={<AlertTriangle className="w-4 h-4 flex-shrink-0" />}
               loadingText="กำลังโหลด..."
-              className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl shadow-sm transition ${
+              className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl shadow-sm transition whitespace-nowrap ${
                 filter === 'low' 
                   ? 'bg-red-600 text-white' 
                   : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200'
@@ -156,15 +152,19 @@ export default async function InventoryPage({
             />
           )}
 
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+          {/* มือถือใช้ grid 2 คอลัมน์เหมือนเดิม / หน้าจอคอมพิวเตอร์เรียงแถวเดียวยาวเต็มพื้นที่ */}
+          <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:flex-row sm:w-auto items-center">
+            
+            {/* ปุ่มเติมสต็อก/ลงทะเบียนบอร์ดใหม่ */}
             <Link
               href="/dashboard/inventory/boards/restock"
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition text-center whitespace-nowrap"
+              className="col-span-2 sm:col-span-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition text-center whitespace-nowrap"
             >
               <PlusCircle className="w-4 h-4 flex-shrink-0" /> 
-              <span>เติมสต็อก</span>
+              <span>เติมสต็อก/ลงทะเบียนบอร์ดใหม่</span>
             </Link>
 
+            {/* ปุ่มเบิกอะไหล่ */}
             <Link
               href="/dashboard/inventory/boards/withdraw"
               className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition text-center whitespace-nowrap"
@@ -173,6 +173,7 @@ export default async function InventoryPage({
               <span>เบิกอะไหล่</span>
             </Link>
 
+            {/* ปุ่มคืนอะไหล่ */}
             <Link
               href="/dashboard/inventory/boards/job-restock"
               className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition text-center whitespace-nowrap"
@@ -181,10 +182,11 @@ export default async function InventoryPage({
               <span>คืนอะไหล่</span>
             </Link>
 
+            {/* ปุ่มประวัติ (เฉพาะ Admin) */}
             {isAdmin && (
               <Link
                 href="/dashboard/inventory/logs"
-                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs sm:text-sm font-bold rounded-xl transition text-center whitespace-nowrap shadow-xs"
+                className="col-span-2 sm:col-span-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs sm:text-sm font-bold rounded-xl transition text-center whitespace-nowrap shadow-xs"
               >
                 <History className="w-4 h-4 flex-shrink-0" /> 
                 <span>ประวัติ</span>
@@ -283,7 +285,7 @@ export default async function InventoryPage({
               ))}
             </div>
 
-            {/* มุมมอง Desktop */}
+            {/* มุมมอง Desktop ตารางขยายกว้างเต็มพื้นที่ */}
             <div className="hidden sm:block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[1100px]">

@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 // สร้าง Supabase Client สำหรับอัปโหลดไฟล์ไปที่ Storage
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const BUCKET_NAME = "repair-images";
@@ -186,6 +186,12 @@ export default async function BackupWithdrawPage({
       revalidatePath('/dashboard/inventory/backups');
       revalidatePath('/dashboard/inventory/logs');
     } catch (error: any) {
+      // 🌟 เช็คสัญญาณ Redirect แบบปลอดภัย (รองรับ Next.js ทุกเวอร์ชัน)
+      const errString = error?.message || String(error);
+      if (errString.includes('NEXT_REDIRECT') || error?.digest?.startsWith('NEXT_REDIRECT')) {
+        throw error;
+      }
+
       console.error('Withdraw error:', error);
       throw new Error(error.message || 'เกิดข้อผิดพลาดในการเบิกอะไหล่');
     }

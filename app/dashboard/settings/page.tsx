@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { HardDrive, Download, CheckCircle2, AlertCircle, Tags, Package, ChevronRight, Video, RefreshCw, Clock } from "lucide-react";
+import { HardDrive, Download, CheckCircle2, AlertCircle, Tags, Package, ChevronRight, Video, RefreshCw, Clock, BellRing } from "lucide-react";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
@@ -12,6 +12,10 @@ export default function SettingsPage() {
   // สถานะเปิด-ปิดบันทึกวิดีโอ LINE OA
   const [lineOaSaveVideo, setLineOaSaveVideo] = useState(true);
   const [savingToggle, setSavingToggle] = useState(false);
+
+  // 📌 [เพิ่มใหม่] สถานะเปิด-ปิดแจ้งเตือนการเบิกอะไหล่ LINE OA
+  const [lineOaAlertEnabled, setLineOaAlertEnabled] = useState(true);
+  const [savingAlertToggle, setSavingAlertToggle] = useState(false);
 
   // สถานะสำหรับเก็บรายการไฟล์แบ็คอัพ
   const [backupFiles, setBackupFiles] = useState<any[]>([]);
@@ -40,6 +44,10 @@ export default function SettingsPage() {
       .then((data) => {
         if (data.success && data.setting) {
           setLineOaSaveVideo(data.setting.lineOaSaveVideo);
+          // 📌 [เพิ่มใหม่] โหลดค่าแจ้งเตือน
+          if (data.setting.lineOaAlertEnabled !== undefined) {
+            setLineOaAlertEnabled(data.setting.lineOaAlertEnabled);
+          }
         }
       })
       .catch((err) => console.error("Failed to load settings", err));
@@ -69,6 +77,29 @@ export default function SettingsPage() {
     }
   };
 
+  // 📌 [เพิ่มใหม่] ฟังก์ชันกดเปลี่ยนสวิตช์แจ้งเตือนการเบิกอะไหล่
+  const handleAlertToggleChange = async (checked: boolean) => {
+    setLineOaAlertEnabled(checked);
+    setSavingAlertToggle(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lineOaAlertEnabled: checked }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert("บันทึกค่าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        setLineOaAlertEnabled(!checked);
+      }
+    } catch (err) {
+      console.error(err);
+      setLineOaAlertEnabled(!checked);
+    } finally {
+      setSavingAlertToggle(false);
+    }
+  };
+
   const handleBackup = async () => {
     if (!confirm("คุณต้องการสำรองข้อมูลฐานข้อมูลตอนนี้ใช่หรือไม่?")) return;
     
@@ -82,7 +113,6 @@ export default function SettingsPage() {
       if (data.success) {
         setIsSuccess(true);
         setMessage(`สำรองข้อมูลสำเร็จ! ไฟล์: ${data.filename}`);
-        // โหลดรายชื่อไฟล์แบ็คอัพใหม่ทันทีหลังสำรองข้อมูลสำเร็จ
         fetchBackupFiles();
       } else {
         setIsSuccess(false);
@@ -155,6 +185,30 @@ export default function SettingsPage() {
             className="sr-only peer" 
           />
           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+        </label>
+      </div>
+
+      {/* 📌 [เพิ่มใหม่] ส่วนตั้งค่าเปิด-ปิด แจ้งเตือนยังไม่ได้เบิกอะไหล่ผ่าน LINE OA */}
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-3.5">
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+            <BellRing className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-gray-800">แจ้งเตือนยังไม่ได้เบิกอะไหล่ผ่าน LINE OA</h2>
+            <p className="text-xs text-gray-500 mt-0.5">เปิด/ปิด การส่งข้อความแจ้งเตือนอัตโนมัติเมื่อส่งคลิปแล้วแต่ยังไม่เบิกอะไหล่</p>
+          </div>
+        </div>
+        
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input 
+            type="checkbox" 
+            checked={lineOaAlertEnabled}
+            disabled={savingAlertToggle}
+            onChange={(e) => handleAlertToggleChange(e.target.checked)}
+            className="sr-only peer" 
+          />
+          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
         </label>
       </div>
 

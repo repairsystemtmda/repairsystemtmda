@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 interface JobActionButtonProps {
@@ -52,6 +53,13 @@ export function JobLinkButton({
   className?: string;
 }) {
   const [loading, setLoading] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // รีเซ็ตสถานะ loading ทันทีเมื่อ URL หรือ Query เปลี่ยนแปลง (เช่น กดยกเลิกปิด Modal)
+  useEffect(() => {
+    setLoading(false);
+  }, [pathname, searchParams]);
 
   return (
     <Link

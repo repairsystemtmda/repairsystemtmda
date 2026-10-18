@@ -443,9 +443,11 @@ export default function RestockPage() {
                 </select>
               </div>
 
-              {/* Board Type Selection (Dropdown ทุกหมวดหมู่) */}
+              {/* Board Type Selection (Dropdown ทุกหมวดหมู่ - บังคับใส่) */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-bold text-gray-900">ประเภทบอร์ดมาตรฐาน (Board Type)</label>
+                <label className="block text-sm font-bold text-gray-900">
+                  ประเภทบอร์ดมาตรฐาน (Board Type) <span className="text-red-500">*</span>
+                </label>
                 <div className="space-y-2">
                   <select
                     name="boardType"
@@ -494,10 +496,13 @@ export default function RestockPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-bold text-gray-900">ตำแหน่งจัดเก็บ</label>
+                <label className="block text-sm font-bold text-gray-900">
+                  ตำแหน่งจัดเก็บ <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   name="location"
+                  required
                   value={formData.location}
                   onChange={handleChange}
                   placeholder="เช่น A-01, Shelf 2"

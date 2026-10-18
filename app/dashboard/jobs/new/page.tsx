@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Camera, Upload, Box, Wifi, Activity, Cpu, FileText, X, ScanLine, Tag, Loader2, UserCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Camera, Upload, Box, Wifi, Activity, Cpu, FileText, X, ScanLine, Tag, Loader2, UserCheck, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -86,6 +86,12 @@ export default function NewJobPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [loadingText, setLoadingText] = useState("กำลังเตรียมข้อมูล...");
 
+  // State สำหรับจัดการ Modal แจ้งเตือนรูปเนมเพลทแนวตั้ง
+  const [orientationAlert, setOrientationAlert] = useState<{ show: boolean; message: string }>({
+    show: false,
+    message: '',
+  });
+
   const [currentUser, setCurrentUser] = useState({
     id: "",
     name: "กำลังโหลด...",
@@ -160,6 +166,32 @@ export default function NewJobPage() {
     }
   };
 
+  // ฟังก์ชันตรวจสอบรูปเนมเพลทว่าเป็น "แนวนอน" หรือไม่ (Width ต้องมากกว่า Height)
+  const handleNameplateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        if (img.width <= img.height) {
+          setOrientationAlert({
+            show: true,
+            message: `รูปเนมเพลท (${file.name}) ที่คุณเลือกเป็น "แนวตั้งหรือจัตุรัส" กรุณาหมุนโทรศัพท์และถ่ายภาพใน "แนวนอน" เท่านั้นครับ`,
+          });
+          e.target.value = '';
+        } else {
+          setNameplateFile(file);
+          e.target.value = '';
+        }
+      };
+    };
+  };
+
   const filteredBackupDevices = allBackupDevices.filter((dev) => {
     const statusUpper = (dev.status || '').toUpperCase();
     const isAvailable = statusUpper === 'AVAILABLE' || statusUpper === 'READY';
@@ -200,7 +232,7 @@ export default function NewJobPage() {
 
       const requiresNameplate = (category === "อินเวอร์เตอร์" || category === "Inverter") && (actualBrand === "Deye" || actualBrand === "TMDA");
       if (requiresNameplate && !nameplateFile) {
-        alert("กรุณาแนบรูปถ่ายเนมเพลท (Nameplate / ป้าย S/N) สำหรับออกรายงาน Deye/TMDA");
+        alert("กรุณาแนบรูปถ่ายเนมเพลท (Nameplate / ป้าย S/N) ในแนวนอน สำหรับออกรายงาน Deye/TMDA");
         return;
       }
 
@@ -241,7 +273,6 @@ export default function NewJobPage() {
       };
 
       if (!isDirectLoan) {
-        // 1. อัปโหลดรูปเนมเพลทไปยัง Supabase Storage (ถ้ามี)
         if (nameplateFile) {
           setUploadProgress(30);
           setLoadingText("กำลังอัปโหลดรูปเนมเพลทไปยัง Supabase Storage...");
@@ -263,7 +294,6 @@ export default function NewJobPage() {
           payload.imageUrl = publicUrlData.publicUrl;
         }
 
-        // 2. อัปโหลดรูปภาพหลักฐานอื่นๆ ไปยัง Supabase Storage แบบ Parallel Upload
         if (selectedFiles.length > 0) {
           setUploadProgress(50);
           setLoadingText("กำลังบีบอัดและอัปโหลดรูปภาพหลักฐาน...");
@@ -295,7 +325,6 @@ export default function NewJobPage() {
       setUploadProgress(80);
       setLoadingText("กำลังบันทึกข้อมูลเข้าสู่ระบบ...");
 
-      // ส่งข้อมูลแบบ JSON ไปยัง API
       const response = await fetch("/api/jobs", {
         method: "POST",
         headers: {
@@ -342,6 +371,32 @@ export default function NewJobPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-4 px-3 sm:p-6 pb-24 w-full relative">
       
+      {/* Modal แจ้งเตือนเมื่อพบรูปเนมเพลทแนวตั้ง */}
+      {orientationAlert.show && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 sm:p-8 w-full max-w-sm text-center space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="w-20 h-20 mx-auto bg-amber-50 rounded-full flex items-center justify-center border border-amber-100 shadow-inner">
+              <AlertTriangle className="w-10 h-10 text-amber-500 animate-bounce" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">ตรวจพบรูปแนวตั้ง!</h3>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed px-1">
+                {orientationAlert.message}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setOrientationAlert({ show: false, message: '' })}
+              className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl text-sm transition shadow-lg shadow-amber-500/30 cursor-pointer"
+            >
+              รับทราบ / ถ่ายใหม่
+            </button>
+          </div>
+        </div>
+      )}
+
       {isSubmitting && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 sm:p-8 w-full max-w-md text-center space-y-5">
@@ -558,7 +613,7 @@ export default function NewJobPage() {
 
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                        เบอร์โทรศัพท์ติดต่อ *
+                        เบอร์โทรศัพท์ติดต่อ <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="tel"
@@ -662,11 +717,12 @@ export default function NewJobPage() {
 
                   <div>
                     <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                      เบอร์โทรศัพท์ติดต่อ
+                      เบอร์โทรศัพท์ติดต่อ <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
                       name="phone"
+                      required
                       placeholder="เช่น 0812345678"
                       className="w-full px-3.5 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl text-xs sm:text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition"
                     />
@@ -676,11 +732,12 @@ export default function NewJobPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                      รุ่นเครื่อง (Model)
+                      รุ่นเครื่อง (Model) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="model"
+                      required
                       placeholder="เช่น SUN2000-5KTL"
                       className="w-full px-3.5 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl text-xs sm:text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition"
                     />
@@ -817,7 +874,7 @@ export default function NewJobPage() {
                 {isDeyeOrTmdaInverter && (
                   <div className="p-3.5 sm:p-4 bg-indigo-50/50 border border-indigo-200 rounded-xl space-y-3">
                     <label className="block text-xs sm:text-sm font-semibold text-indigo-900 flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-indigo-600 shrink-0" /> รูปถ่ายเนมเพลท (Nameplate) <span className="text-red-500">*</span>
+                      <Tag className="w-4 h-4 text-indigo-600 shrink-0" /> รูปถ่ายเนมเพลท (Nameplate) <span className="text-red-500">* (ถ่ายรูปแนวนอนเท่านั้น)</span>
                     </label>
                     
                     {!nameplateFile ? (
@@ -826,23 +883,19 @@ export default function NewJobPage() {
                           type="file" 
                           accept="image/*" 
                           className="sr-only"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              setNameplateFile(e.target.files[0]);
-                            }
-                          }}
+                          onChange={handleNameplateChange}
                         />
                         <div className="flex flex-col items-center justify-center space-y-1.5 pointer-events-none">
                           <Upload className="w-5 h-5 text-indigo-600" />
                           <div className="text-xs font-semibold text-indigo-900">
-                            <span>คลิกเพื่ออัปโหลดรูปเนมเพลทเครื่อง</span>
+                            <span>คลิกเพื่ออัปโหลดรูปเนมเพลทเครื่อง (ถ่ายรูปแนวนอนเท่านั้น)</span>
                           </div>
                         </div>
                       </label>
                     ) : (
                       <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2 mt-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-gray-600">รูปเนมเพลท (1 ไฟล์):</span>
+                          <span className="text-xs font-semibold text-gray-600">รูปเนมเพลท (ผ่านตรวจสอบแนวนอนแล้ว):</span>
                           <button
                             type="button"
                             onClick={() => setNameplateFile(null)}

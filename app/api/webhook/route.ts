@@ -20,6 +20,30 @@ function verifySignature(body: string, signature: string): boolean {
   return hash === signature;
 }
 
+// ฟังก์ชันช่วยส่งข้อความ LINE (รองรับทั้ง Reply และ Push เข้ากลุ่ม)
+async function sendLineMessage(replyTokenOrTo: string, text: string, isGroup: boolean = false, sourceId?: string) {
+  const url = isGroup 
+    ? 'https://api.line.me/v2/bot/message/push' 
+    : 'https://api.line.me/v2/bot/message/reply';
+
+  const body = isGroup ? {
+    to: sourceId,
+    messages: [{ type: 'text', text: text }]
+  } : {
+    replyToken: replyTokenOrTo,
+    messages: [{ type: 'text', text: text }]
+  };
+
+  await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const signature = req.headers.get('x-line-signature');
@@ -58,13 +82,13 @@ export async function POST(req: NextRequest) {
 
           if (!isSaveVideoEnabled) {
             console.log(`⏸️ ข้ามการบันทึกวิดีโอ เนื่องจากฟังก์ชันถูกปิดใช้งานในตั้งค่าระบบ`);
-            continue; // ข้ามการทำงานของวิดีโอนี้ไปเลยทันที
+            continue;
           }
 
           const messageId = event.message.id;
           console.log(`ได้รับไฟล์วิดีโอ (Message ID: ${messageId}) จาก ${userId}`);
 
-          // ดึงไฟล์วิดีโอจาก LINE Messaging API[cite: 11]
+          // ดึงไฟล์วิดีโอจาก LINE Messaging API
           const videoRes = await fetch(`https://api-data.line.me/v2/bot/message/${messageId}/content`, {
             headers: {
               Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`,
@@ -75,45 +99,42 @@ export async function POST(req: NextRequest) {
             const arrayBuffer = await videoRes.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
 
-            // สร้างโครงสร้างโฟลเดอร์แยกตาม ปี และ เดือน (เช่น public/uploads/videos/2026/09)[cite: 11]
+            // สร้างโครงสร้างโฟลเดอร์แยกตาม ปี และ เดือน (เช่น public/uploads/videos/2026/09)
             const now = new Date();
             const yearStr = now.getFullYear().toString();
-            const monthStr = (now.getMonth() + 1).toString().padStart(2, '0'); // เดือน 01-12[cite: 11]
+            const monthStr = (now.getMonth() + 1).toString().padStart(2, '0');
 
             const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'videos', yearStr, monthStr);
             if (!fs.existsSync(uploadDir)) {
               fs.mkdirSync(uploadDir, { recursive: true });
             }
 
-            // ดึงข้อความที่ช่างพิมพ์ไว้ก่อนหน้านี้[cite: 11]
+            // ดึงข้อความที่ช่างพิมพ์ไว้ก่อนหน้านี้
             const rawText = userLastMessage.get(userId) || 'UnknownText';
 
-            // แกะหาเลข SN 4 ตัวท้ายจากข้อความ[cite: 11]
+            // แกะหาเลข SN 4 ตัวท้ายจากข้อความ
             const snMatch = rawText.match(/(?:sn[-:\s]*)?(\d{4})/i);
             const serial4Digits = snMatch ? snMatch[1] : 'NoSN';
 
-            // จัดรูปแบบข้อความสำหรับตั้งชื่อไฟล์[cite: 11]
+            // จัดรูปแบบข้อความสำหรับตั้งชื่อไฟล์
             const safeTextInfo = rawText
               .replace(/[\/\\?%*:|"<>]/g, '-')
               .replace(/\s+/g, '_');
 
-            // จัดรูปแบบวันที่และเวลา (เช่น 20260928_221000)[cite: 11]
             const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
             const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '');
             const dateTimeCode = `${dateStr}_${timeStr}`;
 
-            // สร้างชื่อไฟล์[cite: 11]
             const fileName = `${safeTextInfo}_${serial4Digits}_${dateTimeCode}.mp4`;
             const filePath = path.join(uploadDir, fileName);
 
-            // บันทึกไฟล์ลงโฟลเดอร์ประจำเดือน[cite: 11]
+            // บันทึกไฟล์ลงโฟลเดอร์
             fs.writeFileSync(filePath, buffer);
             
-            // Path ที่เก็บลง Database (เผื่อไว้เรียกดูบนเว็บ)[cite: 11]
             const dbVideoPath = `/uploads/videos/${yearStr}/${monthStr}/${fileName}`;
             console.log(`บันทึกวิดีโอสำเร็จที่: ${filePath}`);
 
-            // บันทึกข้อมูลลงตาราง TestVideo ในฐานข้อมูล[cite: 11]
+            // บันทึกข้อมูลลงตาราง TestVideo ในฐานข้อมูล
             await prisma.testVideo.create({
               data: {
                 messageId: messageId,
@@ -126,7 +147,38 @@ export async function POST(req: NextRequest) {
 
             console.log(`บันทึกข้อมูลลงฐานข้อมูลเรียบร้อยแล้ว`);
 
-            // ล้างข้อความชั่วคราวของ User นี้[cite: 11]
+            // 🔍 ตรวจสอบสถานะการเบิกอะไหล่จากเลข SN 4 ตัวท้าย
+            if (serial4Digits !== 'NoSN') {
+              const isAlertEnabled = setting ? setting.lineOaAlertEnabled : true;
+
+              if (isAlertEnabled) {
+                const targetJob = await prisma.job.findFirst({
+                  where: {
+                    serialNumber: {
+                      endsWith: serial4Digits,
+                    },
+                  },
+                  include: {
+                    stockLogs: true, 
+                  },
+                  orderBy: { createdAt: 'desc' },
+                });
+
+                // ถ้าเจอใบงาน แต่ยังไม่มีประวัติการเบิกอะไหล่ ส่ง LINE เตือน (ข้อความแบบสั้นกระชับตามต้องการ)
+                if (targetJob && (!targetJob.stockLogs || targetJob.stockLogs.length === 0)) {
+                  const warningText = `⚠️ [Alert] แจ้งเตือนเบิกอะไหล่ SN: [${serial4Digits}] ยังไม่ได้ทำรายการเบิกอะไหล่ (Spare Parts Not Issued) กรุณาตรวจสอบครับ`;
+
+                  const sourceId = event.source.groupId || event.source.roomId || event.source.userId;
+                  const isGroup = !!event.source.groupId || !!event.source.roomId;
+
+                  await sendLineMessage(event.replyToken, warningText, isGroup, sourceId);
+                }
+              } else {
+                console.log(`🔕 ข้ามการส่งข้อความแจ้งเตือน เนื่องจากฟังก์ชันแจ้งเตือนถูกปิดใช้งานในตั้งค่าระบบ`);
+              }
+            }
+
+            // ล้างข้อความชั่วคราวของ User นี้
             userLastMessage.delete(userId);
 
           } else {

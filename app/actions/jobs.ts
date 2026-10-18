@@ -7,44 +7,6 @@ import path from 'path';
 import { cookies } from 'next/headers';
 import { getServerSession } from 'next-auth';
 
-// 1. ฟังก์ชันสร้าง Job งานซ่อม
-export async function createRepairJob(formData: FormData) {
-  const customerName = formData.get('customerName') as string;
-  const customerPhone = (formData.get('customerPhone') as string) || '';
-  const serialNumber = formData.get('serialNumber') as string;
-  const category = (formData.get('category') as string) || 'INVERTER';
-  const issueDescription = (formData.get('issueDescription') as string) || '';
-
-  if (!customerName || !serialNumber) {
-    return { error: 'กรุณากรอกชื่อลูกค้าและ Serial Number' };
-  }
-
-  try {
-    const count = await prisma.job.count();
-    const currentYear = new Date().getFullYear();
-    const jobNo = `JOB-${currentYear}-${String(count + 1).padStart(3, '0')}`;
-
-    await prisma.job.create({
-      data: {
-        jobNo,
-        customerName,
-        phone: customerPhone,
-        serialNumber,
-        category,
-        note: issueDescription,
-        status: 'PENDING',
-      },
-    });
-
-    revalidatePath('/dashboard/jobs');
-    revalidatePath('/dashboard');
-    return { success: true };
-  } catch (error) {
-    console.error('Error creating repair job:', error);
-    return { error: 'ไม่สามารถสร้าง Job งานซ่อมได้' };
-  }
-}
-
 // 💡 ฟังก์ชันตัวช่วย: แปลงและบันทึกไฟล์ลง Disk
 const saveFileToDisk = async (fileInput: any): Promise<string | null> => {
   if (!fileInput) return null;
@@ -86,6 +48,78 @@ const saveFileToDisk = async (fileInput: any): Promise<string | null> => {
 
   return null;
 };
+
+// 1. ฟังก์ชันสร้าง Job งานซ่อม (ปรับปรุงให้บันทึกรูปภาพแยกประเภท Nameplate และ Other แล้ว)
+export async function createRepairJob(formData: FormData) {
+  const customerName = formData.get('customerName') as string;
+  const customerPhone = (formData.get('customerPhone') as string) || '';
+  const serialNumber = formData.get('serialNumber') as string;
+  const category = (formData.get('category') as string) || 'อินเวอร์เตอร์';
+  const issueDescription = (formData.get('issueDescription') as string) || '';
+
+  if (!customerName || !serialNumber) {
+    return { error: 'กรุณากรอกชื่อลูกค้าและ Serial Number' };
+  }
+
+  try {
+    const count = await prisma.job.count();
+    const currentYear = new Date().getFullYear();
+    const jobNo = `JOB-${currentYear}-${String(count + 1).padStart(3, '0')}`;
+
+    // สร้าง Job ใหม่
+    const newJob = await prisma.job.create({
+      data: {
+        jobNo,
+        customerName,
+        phone: customerPhone,
+        serialNumber,
+        category,
+        note: issueDescription,
+        status: 'PENDING',
+      },
+    });
+
+    // 🌟 จัดการบันทึกรูปเนมเพลท (กำหนด type เป็น 'NAMEPLATE' ชัดเจน)
+    const nameplateFile = formData.get('nameplateImages');
+    if (nameplateFile) {
+      const fileUrl = await saveFileToDisk(nameplateFile);
+      if (fileUrl) {
+        await prisma.jobImage.create({
+          data: {
+            url: fileUrl,
+            jobId: newJob.id,
+            type: 'NAMEPLATE',
+          },
+        });
+      }
+    }
+
+    // 🌟 จัดการบันทึกรูปภาพอื่นๆ / สภาพเครื่อง (กำหนด type เป็น 'OTHER')
+    const otherFiles = [
+      ...formData.getAll('otherImages'),
+      ...formData.getAll('otherFiles'),
+    ];
+    for (const file of otherFiles) {
+      const fileUrl = await saveFileToDisk(file);
+      if (fileUrl) {
+        await prisma.jobImage.create({
+          data: {
+            url: fileUrl,
+            jobId: newJob.id,
+            type: 'OTHER',
+          },
+        });
+      }
+    }
+
+    revalidatePath('/dashboard/jobs');
+    revalidatePath('/dashboard');
+    return { success: true };
+  } catch (error) {
+    console.error('Error creating repair job:', error);
+    return { error: 'ไม่สามารถสร้าง Job งานซ่อมได้' };
+  }
+}
 
 // 2. ฟังก์ชันอัปเดต Job และจัดการสถานะเครื่องสำรอง
 export async function updateJobAction(formData: FormData) {
