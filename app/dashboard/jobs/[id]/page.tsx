@@ -425,7 +425,6 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
         return `/uploads/${filename}`;
       };
 
-      // 📌 [แก้ไขจุดนี้] ตรวจสอบว่ามีการอัปโหลดไฟล์เนมเพลทใหม่จริงหรือไม่
       const nameplateFile = formData.get('nameplateImages') as File;
       if (nameplateFile && nameplateFile instanceof File && nameplateFile.size > 0) {
         await prisma.jobImage.deleteMany({
@@ -798,13 +797,13 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <Laptop className="w-5 h-5 text-indigo-600" /> เลือกเครื่องสำรองให้ลูกค้าใช้งาน
               </h3>
-              <Link
+              <JobLinkButton
                 href={`/dashboard/jobs/${id}`}
-                replace
-                className="text-gray-400 hover:text-gray-600 text-sm font-bold p-1 rounded-lg no-underline"
+                loadingText=""
+                className="text-gray-400 hover:text-gray-600 text-sm font-bold p-1 rounded-lg no-underline transition"
               >
                 ✕
-              </Link>
+              </JobLinkButton>
             </div>
 
             <form action={assignBackupDeviceAndSwap} className="space-y-4">
@@ -831,13 +830,13 @@ export default async function JobDetailPage({ params, searchParams }: PageProps)
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
-                <Link
+                <JobLinkButton
                   href={`/dashboard/jobs/${id}`}
-                  replace
-                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm rounded-xl transition no-underline"
+                  loadingText="กำลังยกเลิก..."
+                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm rounded-xl transition no-underline inline-flex items-center justify-center"
                 >
                   ยกเลิก
-                </Link>
+                </JobLinkButton>
                 <JobSubmitButton
                   loadingText="กำลังบันทึก..."
                   disabled={backupDevices.length === 0}

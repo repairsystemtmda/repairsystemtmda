@@ -188,7 +188,7 @@ export async function updateBackupDevice(id: string, formData: FormData) {
       imageUrlUpdate = { imageUrl: publicUrl };
     }
 
-    // 🌟 ส่วนที่เพิ่มเข้ามา: อัปโหลดรูปภาพสภาพเครื่อง/รูปอื่นๆ (`otherImages`) ขึ้น Supabase Storage และบันทึกลงตาราง BackupDeviceImage
+    // 🌟 อัปโหลดรูปภาพสภาพเครื่อง/รูปอื่นๆ (`otherImages`) ขึ้น Supabase Storage และบันทึกลงตาราง BackupDeviceImage
     const otherImageFiles = formData.getAll('otherImages') as File[];
     for (const imgFile of otherImageFiles) {
       if (imgFile && imgFile instanceof File && imgFile.size > 0) {
@@ -206,7 +206,7 @@ export async function updateBackupDevice(id: string, formData: FormData) {
     // 🌟 กำหนดค่าอัปเดตข้อมูลเครื่องสำรอง พร้อมบันทึกชื่อผู้ทำรายการเป็น adminTMDA
     const updateData: any = {
       status,
-      category, // ใช้ค่าภาษาไทยที่แปลงแล้ว
+      category, 
       brandId: brandId && brandId !== '' ? brandId : null,
       model,
       serialNumber,
@@ -223,7 +223,7 @@ export async function updateBackupDevice(id: string, formData: FormData) {
 
     if (status) {
       updateData.receiverId = currentUserId;
-      updateData.receiverName = currentUserName || 'adminTMDA'; // 👈 บันทึกชื่อผู้บันทึก
+      updateData.receiverName = currentUserName || 'adminTMDA';
     }
 
     await prisma.backupDevice.update({
@@ -298,10 +298,23 @@ export async function addBackupDeviceStockLog(deviceId: string, formData: FormDa
       currentUserId = fallbackUser?.id;
     }
 
-    const sparePartId = formData.get('sparePartId') as string;
-    const rawQuantity = parseInt(formData.get('quantity') as string || '1', 10);
-    const quantity = -Math.abs(rawQuantity);
     const note = formData.get('note') as string;
+    const itemsJson = formData.get('itemsJson') as string;
+
+    if (!itemsJson) {
+      throw new Error('กรุณาระบุรายการอะไหล่ที่ต้องการเบิก');
+    }
+
+    let items: { sparePartId: string; quantity: number }[] = [];
+    try {
+      items = JSON.parse(itemsJson);
+    } catch (e) {
+      throw new Error('รูปแบบข้อมูลรายการอะไหล่ไม่ถูกต้อง');
+    }
+
+    if (!items || items.length === 0) {
+      throw new Error('กรุณาเลือกรายการอะไหล่อย่างน้อย 1 รายการ');
+    }
 
     const device = await prisma.backupDevice.findUnique({
       where: { id: deviceId },
@@ -326,47 +339,54 @@ export async function addBackupDeviceStockLog(deviceId: string, formData: FormDa
       targetJobId = newJob.id;
     }
 
-    const stockLog = await prisma.stockLog.create({
-      data: {
-        jobId: targetJobId,
-        sparePartId,
-        quantity: quantity,
-        type: 'REPAIR_DEDUCT',
-        note,
-        userId: currentUserId,
-      }
-    });
+    // 🌟 ทำงานผ่าน Prisma Transaction เพื่อความถูกต้องและปลอดภัยของข้อมูล
+    await prisma.$transaction(async (tx) => {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const sparePart = await tx.sparePart.findUnique({ where: { id: item.sparePartId } });
+        
+        if (!sparePart || sparePart.stock < item.quantity) {
+          throw new Error(`อะไหล่ "${sparePart?.name || 'ไม่ระบุ'}" ในคลังมีไม่พอเบิก (คงเหลือ ${sparePart?.stock || 0} ชิ้น)`);
+        }
 
-    // 🌟 อัปโหลดรูปภาพหลักฐานการเบิกอะไหล่ขึ้น Supabase Storage
-    const imageFiles = formData.getAll('images') as File[];
-    for (const imgFile of imageFiles) {
-      if (imgFile && imgFile.size > 0) {
-        const publicUrl = await uploadFileToSupabase(imgFile, 'stock-logs');
+        const image1 = formData.get(`image1_${i}`) as File | null;
+        const image2 = formData.get(`image2_${i}`) as File | null;
 
-        await prisma.jobImage.create({
+        if (!image1 || !image2 || image1.size === 0 || image2.size === 0) {
+          throw new Error(`กรุณาแนบรูปถ่ายหลักฐานทั้ง 2 รูป (เต็มบอร์ด และ QR Code) ในรายการที่ ${i + 1}`);
+        }
+
+        // ตัดสต็อกอะไหล่
+        const newStock = sparePart.stock - Math.abs(item.quantity);
+        await tx.sparePart.update({
+          where: { id: item.sparePartId },
+          data: { stock: newStock >= 0 ? newStock : 0 }
+        });
+
+        // สร้าง Log การเบิก (บันทึกจำนวนเป็นค่าติดลบ)
+        const stockLog = await tx.stockLog.create({
           data: {
             jobId: targetJobId,
-            stockLogId: stockLog.id,
-            url: publicUrl,
-            type: 'STOCK_LOG',
+            sparePartId: item.sparePartId,
+            quantity: -Math.abs(item.quantity),
+            type: 'REPAIR_DEDUCT',
+            note: note || 'เบิกอะไหล่ซ่อมเครื่องสำรองพร้อมหลักฐาน',
+            userId: currentUserId,
           }
         });
+
+        // อัปโหลดและบันทึกรูปภาพคู่ประจำรายการนี้
+        const url1 = await uploadFileToSupabase(image1, 'stock-logs');
+        const url2 = await uploadFileToSupabase(image2, 'stock-logs');
+
+        await tx.jobImage.createMany({
+          data: [
+            { jobId: targetJobId, stockLogId: stockLog.id, url: url1, type: 'STOCK_LOG' },
+            { jobId: targetJobId, stockLogId: stockLog.id, url: url2, type: 'STOCK_LOG' },
+          ]
+        });
       }
-    }
-
-    const currentPart = await prisma.sparePart.findUnique({
-      where: { id: sparePartId }
     });
-
-    if (currentPart) {
-      const newStock = currentPart.stock - Math.abs(rawQuantity);
-      await prisma.sparePart.update({
-        where: { id: sparePartId },
-        data: {
-          stock: newStock >= 0 ? newStock : 0
-        }
-      });
-    }
 
     revalidatePath(`/dashboard/inventory/backups/${deviceId}`);
     revalidatePath('/dashboard/inventory/logs');

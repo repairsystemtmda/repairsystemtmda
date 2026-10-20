@@ -11,6 +11,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const BUCKET_NAME = "repair-images";
 
+interface ItemPayload {
+  sparePartId: string;
+  quantity: number;
+}
+
 export async function POST(
   request: Request,
   props: { params: Promise<{ id: string }> | { id: string } }
@@ -47,17 +52,22 @@ export async function POST(
     }
 
     const formData = await request.formData();
-    const sparePartId = formData.get("sparePartId") as string;
-    const quantityStr = formData.get("quantity") as string;
     const note = formData.get("note") as string;
-    
-    const image1 = formData.get("image1") as File | null;
-    const image2 = formData.get("image2") as File | null;
+    const itemsJson = formData.get("itemsJson") as string;
 
-    const quantity = quantityStr ? parseInt(quantityStr, 10) : 1;
-
-    if (!sparePartId) {
+    if (!itemsJson) {
       return NextResponse.json({ error: "กรุณาเลือกรายการอะไหล่" }, { status: 400 });
+    }
+
+    let items: ItemPayload[] = [];
+    try {
+      items = JSON.parse(itemsJson);
+    } catch (e) {
+      return NextResponse.json({ error: "รูปแบบข้อมูลรายการอะไหล่ไม่ถูกต้อง" }, { status: 400 });
+    }
+
+    if (!items || items.length === 0) {
+      return NextResponse.json({ error: "กรุณาเลือกรายการอะไหล่อย่างน้อย 1 รายการ" }, { status: 400 });
     }
 
     const existingJob = await prisma.job.findUnique({
@@ -68,9 +78,6 @@ export async function POST(
       return NextResponse.json({ error: "ไม่พบใบงานนี้ในระบบ" }, { status: 404 });
     }
 
-    let image1Path = null;
-    let image2Path = null;
-
     // ฟังก์ชันช่วยอัปโหลดไฟล์ขึ้น Supabase Storage
     const uploadToSupabase = async (file: File, prefix: string) => {
       const bytes = await file.arrayBuffer();
@@ -78,7 +85,7 @@ export async function POST(
       const filename = `${Date.now()}-${prefix}-${file.name.replaceAll(" ", "_")}`;
       const filePath = `restock/${jobId}/${filename}`;
 
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from(BUCKET_NAME)
         .upload(filePath, buffer, {
           contentType: file.type,
@@ -97,61 +104,66 @@ export async function POST(
       return publicUrlData.publicUrl;
     };
 
-    if (image1 && image1.size > 0) {
-      image1Path = await uploadToSupabase(image1, "1");
-    }
-
-    if (image2 && image2.size > 0) {
-      image2Path = await uploadToSupabase(image2, "2");
-    }
-
     const result = await prisma.$transaction(async (tx) => {
-      const part = await tx.sparePart.findUnique({
-        where: { id: sparePartId },
-      });
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const part = await tx.sparePart.findUnique({
+          where: { id: item.sparePartId },
+        });
 
-      if (!part || part.stock < quantity) {
-        throw new Error(`อะไหล่ ${part?.name || ""} ในคลังไม่เพียงพอสำหรับตัดสต็อก`);
-      }
+        if (!part || part.stock < item.quantity) {
+          throw new Error(`อะไหล่ ${part?.name || ""} ในคลังไม่เพียงพอสำหรับตัดสต็อก (คงเหลือ ${part?.stock || 0} ชิ้น)`);
+        }
 
-      await tx.sparePart.update({
-        where: { id: sparePartId },
-        data: { stock: { decrement: quantity } },
-      });
+        const image1 = formData.get(`image1_${i}`) as File | null;
+        const image2 = formData.get(`image2_${i}`) as File | null;
 
-      // 1. สร้าง StockLog สำหรับบันทึกประวัติการเบิกอะไหล่
-      const stockLog = await tx.stockLog.create({
-        data: {
-          sparePartId: sparePartId,
-          jobId: jobId,
-          quantity: -quantity,
-          type: "USE_FOR_REPAIR",
-          note: note ? `เบิกอะไหล่สำหรับซ่อม: ${note}` : `ตัดสต็อกอัตโนมัติสำหรับการซ่อมบำรุง`,
-          userId: validUserId,
-        },
-      });
+        if (!image1 || !image2 || image1.size === 0 || image2.size === 0) {
+          throw new Error(`กรุณาแนบรูปถ่ายหลักฐานทั้ง 2 รูปในรายการที่ ${i + 1}`);
+        }
 
-      // 2. บันทึก URL รูปภาพลงตาราง JobImage
-      if (image1Path) {
-        await tx.jobImage.create({
+        const image1Path = await uploadToSupabase(image1, `${i}-1`);
+        const image2Path = await uploadToSupabase(image2, `${i}-2`);
+
+        await tx.sparePart.update({
+          where: { id: item.sparePartId },
+          data: { stock: { decrement: item.quantity } },
+        });
+
+        // 1. สร้าง StockLog สำหรับบันทึกประวัติการเบิกอะไหล่
+        const stockLog = await tx.stockLog.create({
           data: {
-            url: image1Path,
-            type: "DUAL_IMAGE",
+            sparePartId: item.sparePartId,
             jobId: jobId,
-            stockLogId: stockLog.id,
+            quantity: -item.quantity,
+            type: "USE_FOR_REPAIR",
+            note: note ? `เบิกอะไหล่สำหรับซ่อม: ${note}` : `ตัดสต็อกอัตโนมัติสำหรับการซ่อมบำรุง`,
+            userId: validUserId,
           },
         });
-      }
 
-      if (image2Path) {
-        await tx.jobImage.create({
-          data: {
-            url: image2Path,
-            type: "DUAL_IMAGE",
-            jobId: jobId,
-            stockLogId: stockLog.id,
-          },
-        });
+        // 2. บันทึก URL รูปภาพลงตาราง JobImage
+        if (image1Path) {
+          await tx.jobImage.create({
+            data: {
+              url: image1Path,
+              type: "DUAL_IMAGE",
+              jobId: jobId,
+              stockLogId: stockLog.id,
+            },
+          });
+        }
+
+        if (image2Path) {
+          await tx.jobImage.create({
+            data: {
+              url: image2Path,
+              type: "DUAL_IMAGE",
+              jobId: jobId,
+              stockLogId: stockLog.id,
+            },
+          });
+        }
       }
 
       // 3. แก้ไขสถานะเป็น IN_REPAIR

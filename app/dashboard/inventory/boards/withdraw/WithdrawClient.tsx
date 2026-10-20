@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Layers, Package, Search, X, Upload, Image as ImageIcon, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Layers, Package, Search, X, Upload, Image as ImageIcon, AlertTriangle, Loader2, Trash2, Plus } from 'lucide-react';
 
 interface SparePart {
   id: string;
@@ -33,6 +33,14 @@ interface Job {
   }[];
 }
 
+// แต่ละรายการเก็บรูป preview แยกของตัวเอง
+interface WithdrawItem {
+  sparePartId: string;
+  quantity: number;
+  boardImagePreview: string | null;
+  qrImagePreview: string | null;
+}
+
 interface WithdrawClientProps {
   spareParts?: SparePart[];
   jobs?: Job[];
@@ -43,26 +51,26 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
-  // State สำหรับจัดการ Popup เตือนรูปแนวตั้ง
   const [warningModalMsg, setWarningModalMsg] = useState<string | null>(null);
   
   const actionType = 'WITHDRAW'; 
   const [purposeType, setPurposeType] = useState<'JOB' | 'GENERAL'>('JOB');
 
+  const [withdrawItems, setWithdrawItems] = useState<WithdrawItem[]>([
+    { sparePartId: '', quantity: 1, boardImagePreview: null, qrImagePreview: null }
+  ]);
+
+  const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPartId, setSelectedPartId] = useState('');
   const [isOpenModal, setIsOpenModal] = useState(false);
 
   const [jobSearchQuery, setJobSearchQuery] = useState('');
   const [selectedJobId, setSelectedJobId] = useState<string>('');
   const [isOpenJobModal, setIsOpenJobModal] = useState(false);
 
-  const [boardImagePreview, setBoardImagePreview] = useState<string | null>(null);
-  const [qrImagePreview, setQrImagePreview] = useState<string | null>(null);
-
   const handlePurposeTypeChange = (pType: 'JOB' | 'GENERAL') => {
     setPurposeType(pType);
-    setSelectedPartId('');
+    setWithdrawItems([{ sparePartId: '', quantity: 1, boardImagePreview: null, qrImagePreview: null }]);
     setSelectedJobId('');
     setErrorMsg('');
   };
@@ -121,7 +129,6 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
         rawStatus.includes('กำลังซ่อม');
 
       if (!isRepairing) return false;
-
       if (!query) return true;
 
       const model = (job.model || '').toLowerCase();
@@ -137,8 +144,25 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
     });
   }, [jobs, jobSearchQuery]);
 
-  const selectedPart = spareParts.find((p) => p.id === selectedPartId);
   const selectedJob = jobs.find((j) => j.id === selectedJobId);
+
+  const handleAddItemRow = () => {
+    setWithdrawItems([
+      ...withdrawItems, 
+      { sparePartId: '', quantity: 1, boardImagePreview: null, qrImagePreview: null }
+    ]);
+  };
+
+  const handleRemoveItemRow = (index: number) => {
+    if (withdrawItems.length === 1) return;
+    setWithdrawItems(withdrawItems.filter((_, i) => i !== index));
+  };
+
+  const handleItemQuantityChange = (index: number, qty: number) => {
+    const newItems = [...withdrawItems];
+    newItems[index].quantity = qty > 0 ? qty : 1;
+    setWithdrawItems(newItems);
+  };
 
   const resizeImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
@@ -177,7 +201,11 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
     });
   };
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'board' | 'qr') => {
+  const handleImageChangeForItem = async (
+    e: React.ChangeEvent<HTMLInputElement>, 
+    itemIndex: number, 
+    type: 'board' | 'qr'
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       const img = new Image();
@@ -186,22 +214,24 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
         URL.revokeObjectURL(objectUrl);
         if (img.width <= img.height) {
           const targetName = type === 'board' ? 'รูปที่ 1 (เต็มบอร์ด)' : 'รูปที่ 2 (QR Code / S/N)';
-          const msg = `${targetName} ที่คุณเลือกเป็น "แนวตั้งหรือจัตุรัส" กรุณาหมุนโทรศัพท์และถ่ายภาพใน "แนวนอน" เท่านั้นครับ`;
+          const msg = `${targetName} ของรายการที่ ${itemIndex + 1} เป็น "แนวตั้งหรือจัตุรัส" กรุณาหมุนโทรศัพท์และถ่ายภาพใน "แนวนอน" เท่านั้นครับ`;
           setWarningModalMsg(msg);
-          if (type === 'board') {
-            setBoardImagePreview(null);
-          } else {
-            setQrImagePreview(null);
-          }
+          
+          const newItems = [...withdrawItems];
+          if (type === 'board') newItems[itemIndex].boardImagePreview = null;
+          else newItems[itemIndex].qrImagePreview = null;
+          setWithdrawItems(newItems);
         } else {
           try {
             setErrorMsg('');
             const compressedBase64 = await resizeImage(file);
+            const newItems = [...withdrawItems];
             if (type === 'board') {
-              setBoardImagePreview(compressedBase64);
+              newItems[itemIndex].boardImagePreview = compressedBase64;
             } else {
-              setQrImagePreview(compressedBase64);
+              newItems[itemIndex].qrImagePreview = compressedBase64;
             }
+            setWithdrawItems(newItems);
           } catch (err) {
             console.error('Error compressing image:', err);
             setErrorMsg('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ กรุณาลองใหม่อีกครั้ง');
@@ -218,14 +248,17 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
       setErrorMsg('กรุณาเลือกข้อมูลเครื่อง/ใบงานซ่อม');
       return;
     }
-    if (!selectedPartId) {
-      setErrorMsg('กรุณาเลือกบอร์ดอะไหล่ที่ต้องการทำรายการ');
-      return;
-    }
 
-    if (purposeType === 'JOB' && (!boardImagePreview || !qrImagePreview)) {
-      setErrorMsg('กรุณาอัปโหลดไฟล์หลักฐานทั้ง 2 ไฟล์ (รูปเต็มบอร์ด และ รูป QR Code)');
-      return;
+    for (let i = 0; i < withdrawItems.length; i++) {
+      const item = withdrawItems[i];
+      if (!item.sparePartId) {
+        setErrorMsg(`กรุณาเลือกบอร์ดอะไหล่ในรายการที่ ${i + 1}`);
+        return;
+      }
+      if (purposeType === 'JOB' && (!item.boardImagePreview || !item.qrImagePreview)) {
+        setErrorMsg(`กรุณาอัปโหลดรูปถ่ายหลักฐานทั้ง 2 รูป (เต็มบอร์ดและ QR) ให้ครบถ้วนในรายการที่ ${i + 1}`);
+        return;
+      }
     }
 
     setLoading(true);
@@ -234,14 +267,14 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
     try {
       const formData = new FormData(event.currentTarget);
       
-      const rawQty = formData.get('quantity');
-      const parsedQty = parseInt(String(rawQty || '1'), 10);
-      if (isNaN(parsedQty) || parsedQty <= 0) {
-        throw new Error('จำนวนต้องมากกว่า 0');
-      }
-      formData.set('quantity', String(parsedQty));
+      const payloadItems = withdrawItems.map(item => ({
+        sparePartId: item.sparePartId,
+        quantity: item.quantity,
+        boardImageBase64: item.boardImagePreview,
+        qrImageBase64: item.qrImagePreview,
+      }));
 
-      formData.set('sparePartId', selectedPartId);
+      formData.set('itemsJson', JSON.stringify(payloadItems));
       formData.set('actionType', actionType);
       formData.set('purposeType', purposeType);
 
@@ -249,13 +282,6 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
         formData.set('jobId', selectedJobId);
       } else {
         formData.delete('jobId');
-      }
-
-      if (boardImagePreview) {
-        formData.set('boardImageBase64', boardImagePreview);
-      }
-      if (qrImagePreview) {
-        formData.set('qrImageBase64', qrImagePreview);
       }
 
       await actionHandler(formData);
@@ -269,7 +295,6 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
   return (
     <div className="p-3 sm:p-6 max-w-3xl mx-auto space-y-4 sm:space-y-6 pb-24">
       
-      {/* Modal แจ้งเตือนเมื่อรูปไม่ใช่แนวนอน */}
       {warningModalMsg && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
           <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl border border-gray-100 p-6 text-center space-y-4">
@@ -291,7 +316,6 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
         </div>
       )}
 
-      {/* ส่วนหัว และปุ่มย้อนกลับ */}
       <div className="flex items-center justify-between gap-3 bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
         <div className="flex items-center gap-2.5 min-w-0">
           <Link
@@ -450,29 +474,167 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
             </div>
           )}
 
-          <div>
-            <label className="block text-xs sm:text-sm font-black text-gray-800 tracking-wide mb-1.5 sm:mb-2">
-              เลือกบอร์ดอะไหล่ที่ต้องการตัดเบิก <span className="text-red-500">*</span>
-            </label>
-            
-            <div 
-              onClick={() => {
-                setErrorMsg('');
-                setIsOpenModal(true);
-              }}
-              className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-gray-900 cursor-pointer flex items-center justify-between hover:border-amber-400 transition shadow-xs"
-            >
-              <span className={selectedPart ? 'text-gray-900 font-extrabold truncate pr-2' : 'text-gray-400 font-bold truncate pr-2'}>
-                {selectedPart ? `[${selectedPart.code || selectedPart.boardModelCode || selectedPart.model || '-'}] ${selectedPart.name} (สต็อก: ${selectedPart.stock})` : '-- คลิกเลือกบอร์ดอะไหล่ --'}
-              </span>
-              <Search className="w-4 h-4 text-gray-500 font-bold shrink-0" />
+          {/* ส่วนรายการบอร์ดอะไหล่ (แต่ละรายการมีช่องอัปโหลดรูปหลักฐานแยกของตัวเอง พร้อมปุ่มลบด้านข้าง) */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs sm:text-sm font-black text-gray-800 tracking-wide">
+                รายการบอร์ด/อะไหล่ที่ต้องการตัดเบิก <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[11px] text-gray-500 font-bold">สามารถเพิ่มได้หลายรายการ</span>
             </div>
 
+            {withdrawItems.map((item, index) => {
+              const currentPart = spareParts.find((p) => p.id === item.sparePartId);
+
+              return (
+                <div key={index} className="bg-gray-50/90 p-4 rounded-2xl border-2 border-gray-200 space-y-3 shadow-xs">
+                  
+                  {/* หัวข้อแถวพร้อมปุ่มถังขยะ */}
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="text-xs font-black text-gray-700 bg-gray-200 px-2.5 py-1 rounded-lg">
+                      รายการที่ {index + 1}
+                    </span>
+                    {withdrawItems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItemRow(index)}
+                        className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 transition flex items-center gap-1 cursor-pointer"
+                        title="ลบรายการนี้"
+                      >
+                        <Trash2 className="w-4 h-4 font-bold" />
+                        <span className="text-xs font-bold">ลบรายการนี้</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* เลือกอะไหล่ + จำนวน */}
+                  <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+                    <div 
+                      onClick={() => {
+                        setActiveItemIndex(index);
+                        setErrorMsg('');
+                        setIsOpenModal(true);
+                      }}
+                      className="flex-1 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-gray-900 cursor-pointer flex items-center justify-between hover:border-amber-400 transition shadow-xs"
+                    >
+                      <span className={currentPart ? 'text-gray-900 font-extrabold truncate pr-2' : 'text-gray-400 font-bold truncate pr-2'}>
+                        {currentPart ? `[${currentPart.code || currentPart.boardModelCode || currentPart.model || '-'}] ${currentPart.name} (สต็อก: ${currentPart.stock})` : `-- คลิกเลือกบอร์ดอะไหล่ รายการที่ ${index + 1} --`}
+                      </span>
+                      <Search className="w-4 h-4 text-gray-500 font-bold shrink-0" />
+                    </div>
+
+                    <div className="w-full sm:w-28 flex items-center gap-1.5">
+                      <span className="text-xs text-gray-500 font-bold sm:hidden">จำนวน:</span>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        min={1}
+                        onChange={(e) => handleItemQuantityChange(index, parseInt(e.target.value) || 1)}
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-black text-gray-900 text-center outline-none focus:border-amber-500 shadow-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* ช่องถ่ายรูปหลักฐานประจำรายการนี้ */}
+                  {purposeType === 'JOB' && (
+                    <div className="space-y-2 pt-2 border-t border-gray-200">
+                      <label className="block text-[11px] sm:text-xs font-black text-gray-700 flex items-center gap-1.5">
+                        <ImageIcon className="w-4 h-4 text-blue-600 shrink-0" /> 
+                        รูปถ่ายหลักฐานประจำรายการที่ {index + 1} <span className="text-red-500 font-bold">(บังคับอัปโหลดทั้ง 2 ไฟล์)</span>
+                      </label>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        
+                        {/* รูปที่ 1: เต็มบอร์ด */}
+                        <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-2 text-center transition bg-white flex flex-col items-center justify-center min-h-[140px] overflow-hidden shadow-xs hover:border-blue-500">
+                          {item.boardImagePreview ? (
+                            <div className="relative w-full h-32 flex items-center justify-center">
+                              <img src={item.boardImagePreview} alt="Board Preview" className="w-full h-full object-cover rounded-lg" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newItems = [...withdrawItems];
+                                  newItems[index].boardImagePreview = null;
+                                  setWithdrawItems(newItems);
+                                }}
+                                className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full shadow-md hover:bg-red-700 transition cursor-pointer"
+                                title="ลบรูปภาพ"
+                              >
+                                <X className="w-3.5 h-3.5 font-bold" />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center py-2">
+                              <Upload className="w-4 h-4 text-blue-600 mb-1" />
+                              <span className="text-[11px] font-black text-gray-800">รูปที่ 1: ถ่ายเต็มบอร์ด *</span>
+                              <span className="text-[10px] text-red-600 font-bold mt-0.5">(ถ่ายรูปแนวนอนเท่านั้น)</span>
+                              <span className="text-[10px] font-bold text-gray-400 mt-0.5">คลิกเพื่อเลือกหรือถ่ายรูป</span>
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={(e) => handleImageChangeForItem(e, index, 'board')} 
+                                className="hidden" 
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        {/* รูปที่ 2: QR Code / S/N */}
+                        <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-2 text-center transition bg-white flex flex-col items-center justify-center min-h-[140px] overflow-hidden shadow-xs hover:border-blue-500">
+                          {item.qrImagePreview ? (
+                            <div className="relative w-full h-32 flex items-center justify-center">
+                              <img src={item.qrImagePreview} alt="QR Preview" className="w-full h-full object-cover rounded-lg" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newItems = [...withdrawItems];
+                                  newItems[index].qrImagePreview = null;
+                                  setWithdrawItems(newItems);
+                                }}
+                                className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full shadow-md hover:bg-red-700 transition cursor-pointer"
+                                title="ลบรูปภาพ"
+                              >
+                                <X className="w-3.5 h-3.5 font-bold" />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center py-2">
+                              <Upload className="w-4 h-4 text-blue-600 mb-1" />
+                              <span className="text-[11px] font-black text-gray-800">รูปที่ 2: ถ่าย QR Code / S/N *</span>
+                              <span className="text-[10px] text-red-600 font-bold mt-0.5">(ถ่ายรูปแนวนอนเท่านั้น)</span>
+                              <span className="text-[10px] font-bold text-gray-400 mt-0.5">คลิกเพื่อเลือกหรือถ่ายรูป</span>
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={(e) => handleImageChangeForItem(e, index, 'qr')} 
+                                className="hidden" 
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              );
+            })}
+
+            {/* ปุ่มกดเพิ่มรายการเบิก */}
+            <button
+              type="button"
+              onClick={handleAddItemRow}
+              className="w-full py-3 border-2 border-dashed border-blue-400 hover:border-blue-500 text-blue-600 hover:bg-blue-50/50 font-black text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Plus className="w-4 h-4 font-bold" /> เพิ่มรายการเบิก
+            </button>
+
+            {/* Modal ค้นหาอะไหล่ */}
             {isOpenModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 backdrop-blur-sm">
                 <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 space-y-3.5 max-h-[90vh] flex flex-col">
                   
-                  {/* หัวข้อ Modal ค้นหา */}
                   <div className="flex items-center justify-between border-b pb-2.5">
                     <h3 className="text-sm sm:text-lg font-black text-gray-900 flex items-center gap-1.5 truncate">
                       <Search className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 shrink-0" /> ค้นหาและเลือกอะไหล่
@@ -486,7 +648,6 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
                     </button>
                   </div>
 
-                  {/* ช่องพิมพ์ค้นหา */}
                   <div className="relative">
                     <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
@@ -499,7 +660,6 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
                     />
                   </div>
 
-                  {/* รายการอะไหล่ที่ค้นหา */}
                   <div className="overflow-y-auto space-y-3 pr-1 flex-1 bg-gray-50/50 p-1">
                     {filteredParts.length === 0 ? (
                       <div className="py-12 text-center text-xs text-gray-400 font-bold">
@@ -513,9 +673,14 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
                           <div
                             key={part.id}
                             onClick={() => {
-                              setSelectedPartId(part.id);
+                              if (activeItemIndex !== null) {
+                                const newItems = [...withdrawItems];
+                                newItems[activeItemIndex].sparePartId = part.id;
+                                setWithdrawItems(newItems);
+                              }
                               setIsOpenModal(false);
                               setSearchQuery('');
+                              setActiveItemIndex(null);
                             }}
                             className="p-4 bg-white border-2 border-gray-200 hover:border-amber-500 rounded-2xl shadow-sm cursor-pointer transition flex items-center justify-between group"
                           >
@@ -557,20 +722,6 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
 
           <div>
             <label className="block text-xs sm:text-sm font-black text-gray-800 tracking-wide mb-1.5 sm:mb-2">
-              จำนวนที่ใช้ <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              name="quantity"
-              defaultValue={1}
-              min={1}
-              required
-              className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm font-black text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition shadow-xs"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs sm:text-sm font-black text-gray-800 tracking-wide mb-1.5 sm:mb-2">
               หมายเหตุการเบิก / อาการซ่อม
             </label>
             <textarea
@@ -581,80 +732,6 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
             />
           </div>
 
-          {/* ส่วนอัปโหลดรูปถ่ายหลักฐาน 2 ช่อง */}
-          {purposeType === 'JOB' && (
-            <div className="space-y-2.5 pt-2 border-t border-gray-100">
-              <label className="block text-xs sm:text-sm font-black text-gray-800 tracking-wide flex items-center gap-1.5">
-                <ImageIcon className="w-4 h-4 text-blue-600 flex-shrink-0" /> รูปถ่ายหลักฐาน <span className="text-red-500 text-[11px] font-black">(บังคับอัปโหลดทั้ง 2 ไฟล์)</span>
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                
-                {/* ช่องที่ 1: รูปถ่ายเต็มบอร์ด */}
-                <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-2 text-center transition bg-gray-50/50 flex flex-col items-center justify-center min-h-[160px] overflow-hidden shadow-xs hover:border-blue-500">
-                  {boardImagePreview ? (
-                    <div className="relative w-full h-40 flex items-center justify-center">
-                      <img src={boardImagePreview} alt="Board Preview" className="w-full h-full object-cover rounded-lg" />
-                      <button
-                        type="button"
-                        onClick={() => setBoardImagePreview(null)}
-                        className="absolute top-1.5 right-1.5 p-1 bg-red-600 text-white rounded-full shadow-md hover:bg-red-700 transition cursor-pointer"
-                        title="ลบรูปภาพ"
-                      >
-                        <X className="w-3.5 h-3.5 font-bold" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center py-2">
-                      <Upload className="w-5 h-5 text-blue-600 mb-1" />
-                      <span className="text-[11px] sm:text-xs font-black text-gray-800">รูปที่ 1: ถ่ายเต็มบอร์ด *</span>
-                      <span className="text-[11px] text-red-600 font-bold mt-0.5">(ถ่ายรูปแนวนอนเท่านั้น)</span>
-                      <span className="text-[10px] font-bold text-gray-400 mt-1">คลิกเพื่อเลือกหรือถ่ายรูป</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => handleImageChange(e, 'board')} 
-                        className="hidden" 
-                      />
-                    </label>
-                  )}
-                </div>
-
-                {/* ช่องที่ 2: รูปถ่าย QR Code / S/N อะไหล่ */}
-                <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-2 text-center transition bg-gray-50/50 flex flex-col items-center justify-center min-h-[160px] overflow-hidden shadow-xs hover:border-blue-500">
-                  {qrImagePreview ? (
-                    <div className="relative w-full h-40 flex items-center justify-center">
-                      <img src={qrImagePreview} alt="QR Preview" className="w-full h-full object-cover rounded-lg" />
-                      <button
-                        type="button"
-                        onClick={() => setQrImagePreview(null)}
-                        className="absolute top-1.5 right-1.5 p-1 bg-red-600 text-white rounded-full shadow-md hover:bg-red-700 transition cursor-pointer"
-                        title="ลบรูปภาพ"
-                      >
-                        <X className="w-3.5 h-3.5 font-bold" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center py-2">
-                      <Upload className="w-5 h-5 text-blue-600 mb-1" />
-                      <span className="text-[11px] sm:text-xs font-black text-gray-800">รูปที่ 2: ถ่าย QR Code / S/N *</span>
-                      <span className="text-[11px] text-red-600 font-bold mt-0.5">(ถ่ายรูปแนวนอนเท่านั้น)</span>
-                      <span className="text-[10px] font-bold text-gray-400 mt-1">คลิกเพื่อเลือกหรือถ่ายรูป</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => handleImageChange(e, 'qr')} 
-                        className="hidden" 
-                      />
-                    </label>
-                  )}
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* ปุ่มด้านล่าง */}
           <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-gray-100">
             <Link
               href="/dashboard/inventory/boards"
@@ -679,7 +756,7 @@ export default function WithdrawClient({ spareParts = [], jobs = [], actionHandl
               ) : (
                 <>
                   <Package className="w-4 h-4 font-bold shrink-0" /> 
-                  <span className="truncate">ยืนยันการเบิกอะไหล่</span>
+                  <span className="truncate">ยืนยันการเบิกอะไหล่ทั้งหมด</span>
                 </>
               )}
             </button>

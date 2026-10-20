@@ -12,7 +12,6 @@ export default async function RestockPage({ params }: PageProps) {
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
-  // 1. ดึงข้อมูล Job จากฐานข้อมูล
   const jobFromDb = await prisma.job.findUnique({
     where: { id },
     select: {
@@ -31,7 +30,6 @@ export default async function RestockPage({ params }: PageProps) {
     customerName: jobFromDb.customerName ?? undefined,
   };
 
-  // 2. ดึงรายการอะไหล่ทั้งหมด
   const spareParts = await prisma.sparePart.findMany({
     select: {
       id: true,
@@ -47,7 +45,6 @@ export default async function RestockPage({ params }: PageProps) {
     },
   });
 
-  // 3. ส่งต่อข้อมูลให้ RestockClient Component
   return (
     <RestockClient
       params={resolvedParams}

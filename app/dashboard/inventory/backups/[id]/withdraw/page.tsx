@@ -8,12 +8,16 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
-// สร้าง Supabase Client สำหรับอัปโหลดไฟล์ไปที่ Storage
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const BUCKET_NAME = "repair-images";
+
+interface ItemPayload {
+  sparePartId: string;
+  quantity: number;
+}
 
 export default async function BackupWithdrawPage({ 
   params 
@@ -53,25 +57,24 @@ export default async function BackupWithdrawPage({
   async function submitWithdrawAction(formData: FormData) {
     'use server';
 
-    const sparePartId = formData.get('sparePartId') as string;
-    // 1. แปลงค่า quantity ให้เป็นค่าติดลบเสมอ เพื่อให้ถูกต้องกับการตัดสต็อกและบันทึก Log
-    const rawQuantity = parseInt(formData.get('quantity') as string || '1', 10);
-    const quantity = -Math.abs(rawQuantity); 
-    
     const note = formData.get('note') as string;
-    const imageFiles = formData.getAll('images') as File[];
+    const itemsJson = formData.get('itemsJson') as string;
 
-    if (!sparePartId) {
-      throw new Error('กรุณาเลือกอะไหล่');
+    if (!itemsJson) {
+      throw new Error('กรุณาระบุรายการอะไหล่ที่ต้องการเบิก');
     }
 
-    // ตรวจสอบไฟล์รูปภาพหลักฐาน
-    const validImages = imageFiles.filter(file => file && file.size > 0);
-    if (validImages.length === 0) {
-      throw new Error('กรุณาอัปโหลดรูปภาพหลักฐานก่อนทำการเบิกอะไหล่ (บังคับใส่รูป)');
+    let items: ItemPayload[] = [];
+    try {
+      items = JSON.parse(itemsJson);
+    } catch (e) {
+      throw new Error('รูปแบบข้อมูลรายการอะไหล่ไม่ถูกต้อง');
     }
 
-    // 2. ค้นหา User ปัจจุบันจาก Session เพื่อบันทึกชื่อผู้ทำรายการให้ถูกต้อง
+    if (!items || items.length === 0) {
+      throw new Error('กรุณาเลือกรายการอะไหล่อย่างน้อย 1 รายการ');
+    }
+
     let currentUserId: string | undefined = undefined;
     try {
       const session = await getServerSession();
@@ -102,40 +105,48 @@ export default async function BackupWithdrawPage({
       currentUserId = fallbackUser?.id;
     }
 
-    try {
-      // อัปโหลดรูปภาพทั้งหมดขึ้น Supabase Storage ก่อนทำ Transaction
-      const uploadedImageUrls: string[] = [];
+    async function uploadFileToSupabase(file: File, prefix: string) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const uniqueSuffix = crypto.randomUUID();
+      const filename = `${Date.now()}-${uniqueSuffix}-${file.name.replace(/\s+/g, '_')}`;
+      const filePath = `backup-withdraws/${id}/${filename}`;
 
-      for (const file of validImages) {
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const uniqueSuffix = crypto.randomUUID();
-        const filename = `${Date.now()}-${uniqueSuffix}-${file.name.replace(/\s+/g, '_')}`;
-        const filePath = `backup-withdraws/${id}/${filename}`;
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(filePath, buffer, {
+          contentType: file.type || 'image/jpeg',
+          upsert: true,
+        });
 
-        const { error: uploadError } = await supabase.storage
-          .from(BUCKET_NAME)
-          .upload(filePath, buffer, {
-            contentType: file.type,
-            upsert: true,
-          });
-
-        if (uploadError) {
-          throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
-        }
-
-        const { data: publicUrlData } = supabase.storage
-          .from(BUCKET_NAME)
-          .getPublicUrl(filePath);
-
-        uploadedImageUrls.push(publicUrlData.publicUrl);
+      if (uploadError) {
+        throw new Error(`ไม่สามารถอัปโหลดรูปภาพได้: ${uploadError.message}`);
       }
 
+      const { data: publicUrlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(filePath);
+
+      return publicUrlData.publicUrl;
+    }
+
+    try {
       await prisma.$transaction(async (tx) => {
-        const sparePart = await tx.sparePart.findUnique({ where: { id: sparePartId } });
-        // ตรวจสอบสต็อก (ใช้ Math.abs เพราะ quantity ในฐานข้อมูลตัวแปรนี้เก็บเป็นค่าติดลบ)
-        if (!sparePart || sparePart.stock < Math.abs(quantity)) {
-          throw new Error('อะไหล่ในคลังไม่เพียงพอ');
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const sparePart = await tx.sparePart.findUnique({ where: { id: item.sparePartId } });
+          if (!sparePart) throw new Error(`ไม่พบข้อมูลอะไหล่ในรายการที่ ${i + 1}`);
+
+          if (sparePart.stock < item.quantity) {
+            throw new Error(`อะไหล่ "${sparePart.name}" ในคลังมีไม่พอเบิก (คงเหลือ ${sparePart.stock} ชิ้น)`);
+          }
+
+          const image1 = formData.get(`image1_${i}`) as File | null;
+          const image2 = formData.get(`image2_${i}`) as File | null;
+
+          if (!image1 || !image2 || image1.size === 0 || image2.size === 0) {
+            throw new Error(`กรุณาแนบรูปถ่ายหลักฐานทั้ง 2 รูป (เต็มบอร์ด และ QR Code) ในรายการที่ ${i + 1}`);
+          }
         }
 
         let targetJob = currentDevice.jobs?.[0];
@@ -152,32 +163,35 @@ export default async function BackupWithdrawPage({
           });
         }
 
-        // ตัดสต็อกโดยใช้ค่า decrement ตามจำนวนจริงที่ใส่เข้ามา
-        await tx.sparePart.update({
-          where: { id: sparePartId },
-          data: { stock: { decrement: Math.abs(quantity) } }
-        });
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const image1 = formData.get(`image1_${i}`) as File;
+          const image2 = formData.get(`image2_${i}`) as File;
 
-        const stockLog = await tx.stockLog.create({
-          data: {
-            jobId: targetJob.id,
-            sparePartId,
-            quantity: quantity, // บันทึกเป็นค่าติดลบ
-            type: 'USE_FOR_REPAIR',
-            note: note || 'เบิกอะไหล่ซ่อมเครื่องสำรอง',
-            userId: currentUserId,
-          }
-        });
+          await tx.sparePart.update({
+            where: { id: item.sparePartId },
+            data: { stock: { decrement: item.quantity } }
+          });
 
-        // วนลูปบันทึก URL รูปภาพลงฐานข้อมูล
-        for (const imageUrl of uploadedImageUrls) {
-          await tx.jobImage.create({
+          const stockLog = await tx.stockLog.create({
             data: {
               jobId: targetJob.id,
-              stockLogId: stockLog.id,
-              url: imageUrl,
-              type: 'STOCK_LOG',
+              sparePartId: item.sparePartId,
+              quantity: -item.quantity,
+              type: 'USE_FOR_REPAIR',
+              note: note || 'เบิกอะไหล่ซ่อมเครื่องสำรองพร้อมหลักฐาน',
+              userId: currentUserId,
             }
+          });
+
+          const url1 = await uploadFileToSupabase(image1, 'board');
+          const url2 = await uploadFileToSupabase(image2, 'qr');
+
+          await tx.jobImage.createMany({
+            data: [
+              { jobId: targetJob.id, stockLogId: stockLog.id, url: url1, type: 'STOCK_LOG' },
+              { jobId: targetJob.id, stockLogId: stockLog.id, url: url2, type: 'STOCK_LOG' },
+            ]
           });
         }
       });
@@ -186,7 +200,6 @@ export default async function BackupWithdrawPage({
       revalidatePath('/dashboard/inventory/backups');
       revalidatePath('/dashboard/inventory/logs');
     } catch (error: any) {
-      // 🌟 เช็คสัญญาณ Redirect แบบปลอดภัย (รองรับ Next.js ทุกเวอร์ชัน)
       const errString = error?.message || String(error);
       if (errString.includes('NEXT_REDIRECT') || error?.digest?.startsWith('NEXT_REDIRECT')) {
         throw error;

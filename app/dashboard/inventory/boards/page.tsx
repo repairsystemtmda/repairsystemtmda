@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { Package, PlusCircle, MinusCircle, RotateCcw, History, Eye, AlertTriangle, Layers, MapPin, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Package, PlusCircle, MinusCircle, RotateCcw, History, Eye, AlertTriangle, Layers, MapPin, ChevronLeft, ChevronRight, X, Download } from 'lucide-react';
 import DeleteButton from './_components/DeleteButton';
 import InventoryFilterForm from './_components/InventoryFilterForm';
 import { FilterLinkButton } from './_components/FilterLinkButton';
@@ -181,6 +181,18 @@ export default async function InventoryPage({
               <RotateCcw className="w-4 h-4 flex-shrink-0" /> 
               <span>คืนอะไหล่</span>
             </Link>
+
+            {/* 🌟 ปุ่ม Export Excel (แสดงเฉพาะ Admin เท่านั้น) */}
+            {isAdmin && (
+              <a
+                href="/api/inventory/boards/export"
+                download
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition text-center whitespace-nowrap"
+              >
+                <Download className="w-4 h-4 flex-shrink-0" /> 
+                <span>ส่งออก Excel</span>
+              </a>
+            )}
 
             {/* ปุ่มประวัติ (เฉพาะ Admin) */}
             {isAdmin && (
