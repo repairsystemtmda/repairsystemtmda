@@ -12,6 +12,7 @@ export async function GET() {
         name: true,
         category: true,
         boardType: true,
+        version: true, // เพิ่มการดึงฟิลด์ version
         model: true,
         location: true,
         stock: true,
@@ -21,14 +22,15 @@ export async function GET() {
     });
 
     const rows: any[][] = [
-      // เว้นคอลัมน์ A ถึง C ให้ว่าง แล้วเอาหัวข้อมาไว้ที่คอลัมน์ D (กึ่งกลางพอดีสำหรับตาราง 10 คอลัมน์)
-      ['', '', '', 'รายงานสรุปสต็อกบอร์ดและอะไหล่ (Inventory Stock Report)'], 
-      [   // แถวที่ 2: หัวตาราง
+      // ขยับหัวข้อรายงานให้กึ่งกลางตามจำนวนคอลัมน์ใหม่ (รวม 11 คอลัมน์ A ถึง K)
+      ['', '', '', '', 'รายงานสรุปสต็อกบอร์ดและอะไหล่ (Inventory Stock Report)'], 
+      [   // แถวที่ 2: หัวตาราง (เพิ่มคอลัมน์ 'เวอร์ชัน')
         'ลำดับ',
         'รหัสรุ่นบอร์ด',
         'ชื่อบอร์ดอะไหล่',
         'หมวดหมู่หลัก',
         'ประเภทบอร์ด',
+        'เวอร์ชัน',
         'รุ่นเครื่องที่รองรับ',
         'ตำแหน่งจัดเก็บ (Location)',
         'คงเหลือ (ชิ้น)',
@@ -54,6 +56,7 @@ export async function GET() {
         item.name,
         item.category || '-',
         item.boardType || '-',
+        item.version || '-', // เพิ่มข้อมูลเวอร์ชันในแถว
         item.model || '-',
         item.location || '-',
         Number(item.stock),
@@ -65,15 +68,15 @@ export async function GET() {
     const lastRow = rows.length;
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
 
-    // กำหนดความกว้างคอลัมน์ให้พอดีสวยงาม
+    // กำหนดความกว้างคอลัมน์ให้พอดีสวยงาม (เพิ่มคอลัมน์สำหรับเวอร์ชัน)
     worksheet['!cols'] = [
       { wch: 8 },  { wch: 20 }, { wch: 25 }, { wch: 18 }, { wch: 18 }, 
-      { wch: 22 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 18 },
+      { wch: 12 }, { wch: 22 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 18 },
     ];
 
-    // กำหนดขอบเขตและเปิดใช้งาน Auto-Filter ที่หัวตารางแถวที่ 2
-    worksheet['!ref'] = `A1:J${lastRow}`;
-    worksheet['!autofilter'] = { ref: `A2:J${lastRow}` };
+    // กำหนดขอบเขตและเปิดใช้งาน Auto-Filter ที่หัวตารางแถวที่ 2 (ช่วง A ถึง K)
+    worksheet['!ref'] = `A1:K${lastRow}`;
+    worksheet['!autofilter'] = { ref: `A2:K${lastRow}` };
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'สต็อกบอร์ดอะไหล่');

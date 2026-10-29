@@ -331,6 +331,8 @@ export default function RestockPage() {
                 <div><span className="text-gray-500">รหัสรุ่น:</span> <span className="font-mono font-black text-gray-900">{formData.boardModelCode}</span></div>
                 <div><span className="text-gray-500">ชื่อบอร์ด:</span> <span className="font-black text-gray-900">{formData.name}</span></div>
                 <div><span className="text-gray-500">หมวดหมู่:</span> <span className="font-black text-gray-900">{formData.category || "-"}</span></div>
+                <div><span className="text-gray-500">ประเภทบอร์ด:</span> <span className="font-black text-indigo-600">{formData.boardType || "-"}</span></div>
+                <div><span className="text-gray-500">เวอร์ชัน:</span> <span className="font-black text-blue-600">{formData.version || "-"}</span></div>
                 <div><span className="text-gray-500">ตำแหน่งจัดเก็บ:</span> <span className="font-black text-gray-900">{formData.location || "-"}</span></div>
               </div>
             </div>
@@ -443,7 +445,7 @@ export default function RestockPage() {
                 </select>
               </div>
 
-              {/* Board Type Selection (Dropdown ทุกหมวดหมู่ - บังคับใส่) */}
+              {/* Board Type Selection */}
               <div className="space-y-1.5">
                 <label className="block text-sm font-bold text-gray-900">
                   ประเภทบอร์ดมาตรฐาน (Board Type) <span className="text-red-500">*</span>

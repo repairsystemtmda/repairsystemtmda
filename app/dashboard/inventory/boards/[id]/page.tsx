@@ -13,7 +13,8 @@ import {
   Cpu, 
   MapPin, 
   Layers, 
-  Boxes
+  Boxes,
+  GitCommit
 } from 'lucide-react';
 import { SaveEditButton, AdjustStockButton, EditModeToggleButton, BoardTypeSelector } from './_components/SubmitButtons';
 
@@ -78,7 +79,7 @@ export default async function SparePartDetailPage({
     take: 10,
   }) : [];
 
-  // Server Action สำหรับอัปเดตข้อมูลรายละเอียดอะไหล่ทั่วไป (เฉพาะ Admin)
+  // Server Action สำหรับอัปเดตข้อมูลรายละเอียดอะไหล่ทั่วไป (รวม Version)
   async function updateSparePart(formData: FormData) {
     'use server';
     const sessionCheck = await getServerSession();
@@ -91,6 +92,7 @@ export default async function SparePartDetailPage({
     const name = formData.get('name') as string;
     const boardModelCode = formData.get('boardModelCode') as string;
     const category = formData.get('category') as string;
+    const version = formData.get('version') as string; // รับค่าเวอร์ชัน
     
     // จัดการค่าประเภทบอร์ด (รองรับกรณีเลือกอื่นๆ แล้วพิมพ์เพิ่มเอง)
     let boardType = formData.get('boardType') as string;
@@ -115,6 +117,7 @@ export default async function SparePartDetailPage({
           boardModelCode,
           category,
           boardType,
+          version, // บันทึกเวอร์ชันลงฐานข้อมูล
           model,
           location,
           minQuantity,
@@ -185,6 +188,7 @@ export default async function SparePartDetailPage({
   const currentCategoryObj = CATEGORIES.find((c) => c.value === part.category);
   const displayCategory = currentCategoryObj ? currentCategoryObj.label : part.category || '-';
   const displayBoardType = (part as any).boardType || '-';
+  const displayVersion = (part as any).version || '-';
 
   return (
     <div className="p-3 sm:p-6 max-w-5xl mx-auto space-y-4 sm:space-y-6 pb-24">
@@ -326,6 +330,25 @@ export default async function SparePartDetailPage({
                 className="w-full px-3.5 py-2.5 bg-gray-50/80 border border-transparent rounded-xl text-xs sm:text-sm font-bold text-gray-900 select-none truncate"
               />
             )}
+          </div>
+
+          {/* ช่องกรอก/แสดงผล เวอร์ชัน (Version) */}
+          <div>
+            <label className="block text-xs sm:text-sm font-bold text-gray-700 mb-1.5 sm:mb-2 flex items-center gap-1.5">
+              <GitCommit className="w-4 h-4 text-blue-600" /> เวอร์ชัน (Version)
+            </label>
+            <input
+              type="text"
+              name="version"
+              defaultValue={(part as any).version || ''}
+              disabled={!isEditing}
+              placeholder="เช่น v1.0, Rev.B"
+              className={`w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition outline-none ${
+                isEditing
+                  ? 'bg-white border border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-xs'
+                  : 'bg-gray-50/80 border border-transparent text-blue-600 select-none'
+              }`}
+            />
           </div>
 
           <div>

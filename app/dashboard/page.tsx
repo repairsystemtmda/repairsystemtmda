@@ -25,10 +25,18 @@ import {
   isBackupInRepair, 
   isBackupSwappedPermanent 
 } from '@/lib/backupUtils';
+import PeriodFilter from './_components/PeriodFilter';
 
 export const dynamic = 'force-dynamic';
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const period = resolvedSearchParams?.period || 'all';
+
   const session = await getServerSession();
   const currentUserEmail = session?.user?.email;
   
@@ -39,7 +47,7 @@ export default async function Page() {
   const role = (currentUser?.role || '').toUpperCase();
   const isAdmin = role === 'ADMIN';
   const isManager = role === 'MANAGER' || role === 'MANGER';
-  const isTechnician = !isAdmin && !isManager; // ช่างทั่วไปหรือบทบาทอื่นๆ
+  const isTechnician = !isAdmin && !isManager;
 
   const rawJobs = await prisma.job.findMany({
     orderBy: { createdAt: 'desc' },
@@ -190,7 +198,6 @@ export default async function Page() {
     return !isNaN(jobDate.getTime()) && jobDate.getDate() === currentDay && jobDate.getMonth() === currentMonth && jobDate.getFullYear() === currentYear;
   }).length;
 
-  // คำนวณสถิติรายเดือนย้อนหลัง 6 เดือนสำหรับ Admin และ Manager
   const monthlyStats: { [key: string]: number } = {};
   const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
   for (let i = 5; i >= 0; i--) {
@@ -328,8 +335,23 @@ export default async function Page() {
     backupCategoryStats[cat] = (backupCategoryStats[cat] || 0) + 1;
   });
 
+  // ตัวกรองช่วงเวลาสำหรับ KPI และประวัติการเบิก
+  let cutoffDate = new Date(0);
+  if (period === '1m') {
+    cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+  } else if (period === '3m') {
+    cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+  } else if (period === '6m') {
+    cutoffDate = new Date();
+    cutoffDate.setMonth(cutoffDate.getMonth() - 6);
+  } else if (period === '1y') {
+    cutoffDate = new Date();
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+  }
+
   const sparePartUsage: { [key: string]: { name: string; boardModelCode: string; category: string; compatibleModel: string; count: number } } = {};
-  
   const technicianStats: { [key: string]: { partsCompleted: number; completedJobs: number; importantActions: number } } = {};
 
   const getOrCreateTech = (name: string) => {
@@ -340,32 +362,40 @@ export default async function Page() {
   };
 
   stockLogs.forEach((log: any) => {
+    const logDate = new Date(log.createdAt);
+    if (period !== 'all' && logDate < cutoffDate) return;
+
     const techName = log.user?.name || log.technicianName || log.userName;
-    if (!techName || techName === 'ช่างทั่วไป') return;
-
     const logType = (log.type || '').toUpperCase();
-    const isUsed = logType.includes('WITHDRAW') || logType.includes('OUT') || logType.includes('USE') || logType.includes('DEDUCT') || log.change < 0 || (!logType.includes('RESTOCK') && !logType.includes('IN'));
     
-    if (isUsed) {
-      const stats = getOrCreateTech(techName);
-      stats.partsCompleted += 1;
-    }
+    const isWithdraw = logType.includes('WITHDRAW') || logType.includes('OUT') || logType.includes('USE') || logType.includes('DEDUCT') || log.change < 0;
+    const isRestock = logType.includes('RESTOCK') || logType.includes('IN') || logType.includes('REGISTER');
 
-    if (log.sparePart) {
-      const id = log.sparePartId;
-      const name = log.sparePart.name;
-      const boardModelCode = log.sparePart.boardModelCode || '-';
-      const category = log.sparePart.category || '-';
-      const compatibleModel = log.sparePart.compatibleModel || log.sparePart.model || '-';
-
-      if (!sparePartUsage[id]) {
-        sparePartUsage[id] = { name, boardModelCode, category, compatibleModel, count: 0 };
+    if (isWithdraw && !isRestock) {
+      if (techName && techName !== 'ช่างทั่วไป') {
+        const stats = getOrCreateTech(techName);
+        stats.partsCompleted += Math.abs(log.quantity || 1);
       }
-      sparePartUsage[id].count += Math.abs(log.quantity || 1);
+
+      if (log.sparePart) {
+        const id = log.sparePartId;
+        const name = log.sparePart.name;
+        const boardModelCode = log.sparePart.boardModelCode || '-';
+        const category = log.sparePart.category || '-';
+        const compatibleModel = log.sparePart.compatibleModel || log.sparePart.model || '-';
+
+        if (!sparePartUsage[id]) {
+          sparePartUsage[id] = { name, boardModelCode, category, compatibleModel, count: 0 };
+        }
+        sparePartUsage[id].count += Math.abs(log.quantity || 1);
+      }
     }
   });
 
   jobs.forEach((job: any) => {
+    const jobDate = new Date(job.createdAt);
+    if (period !== 'all' && jobDate < cutoffDate) return;
+
     const techName = job.user?.name || job.technicianName || job.receiverName || job.userName;
     if (!techName || techName === 'ช่างทั่วไป') return;
 
@@ -454,7 +484,7 @@ export default async function Page() {
           )}
         </div>
 
-        {/* 1. สถานะงานซ่อมของลูกค้า (ทุกคนเห็น: Admin, Manager, Technician) */}
+        {/* 1. สถานะงานซ่อมของลูกค้า */}
         <div>
           <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
             <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 shrink-0" /> สถานะงานซ่อมของลูกค้า (รวมทั้งหมด {totalJobs} เครื่อง)
@@ -586,7 +616,6 @@ export default async function Page() {
           </div>
         </div>
 
-        {/* 🔒 ส่วนเฉพาะ ADMIN: สถิติงานซ่อมเครื่องลูกค้า */}
         {isAdmin && (
           <div className="space-y-3">
             <h2 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
@@ -652,7 +681,6 @@ export default async function Page() {
           </div>
         )}
 
-        {/* 🔒 ส่วนสำหรับ ADMIN และ MANAGER: สถิติรายเดือน (ย้ายมาไว้หลังสถิติงานซ่อมเครื่องลูกค้า) */}
         {(isAdmin || isManager) && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 space-y-4">
             <h2 className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
@@ -666,24 +694,19 @@ export default async function Page() {
                   
                   return (
                     <div key={monthKey} className="flex flex-col items-center flex-1 h-full justify-end group relative">
-                      
-                      {/* Tooltip เมื่อเอาเมาส์ไปชี้ */}
                       <div className="absolute -top-14 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-gray-900 text-white text-[11px] rounded-lg py-1.5 px-3 shadow-xl whitespace-nowrap z-20 pointer-events-none flex flex-col items-center">
                         <span className="font-bold">{monthKey}</span>
                         <span className="text-blue-300 font-semibold">จำนวนแจ้งซ่อม: {count}</span>
                       </div>
 
-                      {/* ตัวเลขจำนวนบนแท่งกราฟ */}
                       <span className="text-[10px] sm:text-xs font-bold text-gray-600 mb-1">
                         {count > 0 ? count : ''}
                       </span>
 
-                      {/* แท่งกราฟ */}
                       <div className="w-full max-w-[45px] sm:max-w-[60px] bg-blue-500 rounded-t-lg transition-all duration-500 hover:bg-blue-600 flex items-end justify-center shadow-sm"
                            style={{ height: `${Math.max(heightPercent, 4)}%` }}>
                       </div>
 
-                      {/* ชื่อเดือนใต้กราฟ */}
                       <span className="text-[10px] sm:text-xs font-semibold text-gray-700 mt-2 text-center whitespace-nowrap">
                         {monthKey}
                       </span>
@@ -695,7 +718,7 @@ export default async function Page() {
           </div>
         )}
 
-        {/* 3. สถานะเครื่องสำรอง (ทุกคนเห็น: Admin, Manager, Technician) */}
+        {/* 3. สถานะเครื่องสำรอง */}
         <div>
           <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
             <HardDrive className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 shrink-0" /> สถานะเครื่องสำรอง (Backup Devices รวม {backupDevices.length} เครื่อง)
@@ -761,10 +784,8 @@ export default async function Page() {
           </div>
         </div>
 
-        {/* 🔒 ส่วนเฉพาะ ADMIN เท่านั้น */}
         {isAdmin && (
           <>
-            {/* 4. สถิติเครื่องสำรอง */}
             <div className="space-y-3">
               <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
                 <HardDrive className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 shrink-0" /> สถิติเครื่องสำรอง (Backup Devices Performance)
@@ -871,7 +892,7 @@ export default async function Page() {
               </div>
             </div>
 
-            {/* 6. สถิติ KPI ช่างซ่อม (แสดงผลเฉพาะ Admin เท่านั้น) */}
+            {/* 6. สถิติ KPI ช่างซ่อม (พร้อมปุ่มเลือกช่วงเวลาแบบมีไอคอนโหลด) */}
             <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-4 sm:p-6 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-4 gap-3">
                 <div className="flex items-center gap-2">
@@ -885,9 +906,9 @@ export default async function Page() {
                     </p>
                   </div>
                 </div>
-                <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full self-start sm:self-auto">
-                  Admin View
-                </span>
+
+                {/* คอมโพเนนต์ปุ่มเลือกช่วงเวลาแบบมี Loading Spinner */}
+                <PeriodFilter />
               </div>
 
               <div className="pt-2">
@@ -906,24 +927,9 @@ export default async function Page() {
                           </div>
 
                           <div className="w-full max-w-[60px] sm:max-w-[75px] flex items-end justify-center gap-0.5 sm:gap-1 h-full bg-gray-50 rounded-t-lg p-1 border-x border-t border-gray-100">
-                            {/* แท่งที่ 1: สีเขียว (เบิกซ่อมสำเร็จ/นำไปใช้งาน) */}
-                            <div 
-                              className="w-1/3 bg-emerald-500 rounded-t transition-all duration-500 hover:bg-emerald-600"
-                              style={{ height: `${p1}%` }}
-                              title={`อะไหล่ใช้งาน: ${stats.partsCompleted} รายการ`}
-                            ></div>
-                            {/* แท่งที่ 2: สีฟ้า/น้ำเงิน (จำนวนเครื่องที่ซ่อมสำเร็จ) */}
-                            <div 
-                              className="w-1/3 bg-blue-600 rounded-t transition-all duration-500 hover:bg-blue-700"
-                              style={{ height: `${p2}%` }}
-                              title={`เครื่องซ่อมสำเร็จ: ${stats.completedJobs} เครื่อง`}
-                            ></div>
-                            {/* แท่งที่ 3: สีม่วง (สถานะสำคัญ) */}
-                            <div 
-                              className="w-1/3 bg-purple-600 rounded-t transition-all duration-500 hover:bg-purple-700"
-                              style={{ height: `${p3}%` }}
-                              title={`สถานะสำคัญ: ${stats.importantActions} รายการ`}
-                            ></div>
+                            <div className="w-1/3 bg-emerald-500 rounded-t transition-all duration-500 hover:bg-emerald-600" style={{ height: `${p1}%` }} title={`อะไหล่ใช้งาน: ${stats.partsCompleted}`}></div>
+                            <div className="w-1/3 bg-blue-600 rounded-t transition-all duration-500 hover:bg-blue-700" style={{ height: `${p2}%` }} title={`เครื่องซ่อมเสร็จ: ${stats.completedJobs}`}></div>
+                            <div className="w-1/3 bg-purple-600 rounded-t transition-all duration-500 hover:bg-purple-700" style={{ height: `${p3}%` }} title={`สถานะสำคัญ: ${stats.importantActions}`}></div>
                           </div>
 
                           <span className="text-[11px] sm:text-xs font-semibold text-gray-700 mt-2 truncate max-w-full text-center" title={techName}>
@@ -934,24 +940,14 @@ export default async function Page() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-gray-400 text-sm">ไม่มีข้อมูลสถิติช่างในระบบ</div>
+                  <div className="text-center py-12 text-gray-400 text-sm">ไม่มีข้อมูลสถิติช่างในช่วงเวลาที่เลือก</div>
                 )}
               </div>
               
-              {/* คำอธิบายสีย่อกราฟ */}
               <div className="flex flex-wrap items-center justify-center gap-4 pt-2 text-[11px] font-semibold text-gray-600">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
-                  <span>1. อะไหล่ใช้งานจริง</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 bg-blue-600 rounded-sm"></div>
-                  <span>2. เครื่องซ่อมเสร็จ</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 bg-purple-600 rounded-sm"></div>
-                  <span>3. สถานะสำคัญ (เปิดงาน/เครื่องสำรอง/สลับถาวร/ส่ง Deye)</span>
-                </div>
+                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-emerald-500 rounded-sm"></div><span>1. อะไหล่ใช้งานจริง</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-blue-600 rounded-sm"></div><span>2. เครื่องซ่อมเสร็จ</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-purple-600 rounded-sm"></div><span>3. สถานะสำคัญ</span></div>
               </div>
 
             </div>

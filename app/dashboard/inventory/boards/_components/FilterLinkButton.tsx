@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 interface FilterLinkButtonProps {
   href: string;
   label: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode; // ปรับให้เป็นตัวเลือกเสริม (ไม่บังคับใส่)
   className: string;
   loadingText?: string;
 }

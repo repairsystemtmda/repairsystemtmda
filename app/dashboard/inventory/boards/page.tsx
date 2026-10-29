@@ -127,7 +127,7 @@ export default async function InventoryPage({
   return (
     <div className="p-3 sm:p-6 max-w-[96rem] mx-auto space-y-5 pb-24">
       
-      {/* ส่วนหัวหน้าเว็บ ขยายความกว้างและจัดระเบียบปุ่มให้ขนาดเท่าเดิมและอยู่ในแถวเดียวกันบนจอใหญ่ */}
+      {/* ส่วนหัวหน้าเว็บ ขยายความกว้างและจัดระเบียบปุ่มให้อยู่ในแถวเดียวกัน */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col 2xl:flex-row 2xl:items-center 2xl:justify-between gap-4">
         <div>
           <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -152,7 +152,7 @@ export default async function InventoryPage({
             />
           )}
 
-          {/* มือถือใช้ grid 2 คอลัมน์เหมือนเดิม / หน้าจอคอมพิวเตอร์เรียงแถวเดียวยาวเต็มพื้นที่ */}
+          {/* ปุ่มควบคุมการทำงาน */}
           <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:flex-row sm:w-auto items-center">
             
             {/* ปุ่มเติมสต็อก/ลงทะเบียนบอร์ดใหม่ */}
@@ -182,7 +182,7 @@ export default async function InventoryPage({
               <span>คืนอะไหล่</span>
             </Link>
 
-            {/* 🌟 ปุ่ม Export Excel (แสดงเฉพาะ Admin เท่านั้น) */}
+            {/* 🌟 ปุ่ม Export Excel (แสดงเฉพาะ Admin) */}
             {isAdmin && (
               <a
                 href="/api/inventory/boards/export"
@@ -264,6 +264,10 @@ export default async function InventoryPage({
                       <span className="text-gray-800 font-semibold">{part.boardType || '-'}</span>
                     </div>
                     <div>
+                      <span className="text-gray-400 block">เวอร์ชัน (Version):</span>
+                      <span className="text-blue-600 font-bold">{part.version || '-'}</span>
+                    </div>
+                    <div>
                       <span className="text-gray-400 block">รุ่นที่รองรับ:</span>
                       <span className="text-gray-800 font-semibold">{part.model || '-'}</span>
                     </div>
@@ -307,6 +311,7 @@ export default async function InventoryPage({
                       <th className="p-4">ชื่อบอร์ดอะไหล่</th>
                       <th className="p-4">หมวดหมู่หลัก</th>
                       <th className="p-4">ประเภทบอร์ด</th>
+                      <th className="p-4">เวอร์ชัน</th>
                       <th className="p-4">รุ่นเครื่องที่รองรับ</th>
                       <th className="p-4">ตำแหน่ง (Location)</th>
                       <th className="p-4">คงเหลือ</th>
@@ -334,6 +339,9 @@ export default async function InventoryPage({
                           ) : (
                             <span className="text-gray-400 font-normal">-</span>
                           )}
+                        </td>
+                        <td className="p-4 text-blue-600 font-bold">
+                          {part.version || '-'}
                         </td>
                         <td className="p-4 text-gray-800 font-semibold">
                           {part.model || '-'}
@@ -383,40 +391,42 @@ export default async function InventoryPage({
               </div>
             </div>
 
-            {/* Pagination Footer */}
+            {/* Pagination Footer - ปรับเปลี่ยนมาใช้ FilterLinkButton เพื่อรองรับ Loading State ทันทีที่กด */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-xs font-extrabold text-gray-700">
                 แสดงหน้า <strong className="text-gray-900 font-black">{page}</strong> จากทั้งหมด <strong className="text-gray-900 font-black">{totalPages}</strong> หน้า (พบรายการทั้งหมด {totalItems} รายการ)
               </div>
               
               <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
-                <Link
+                <FilterLinkButton
                   href={`/dashboard/inventory/boards?query=${query}&category=${category}&boardType=${boardType}&filter=${filter}&page=${Math.max(page - 1, 1)}`}
+                  label="ก่อนหน้า"
+                  icon={<ChevronLeft className="w-4 h-4 font-bold" />}
+                  loadingText="..."
                   className={`px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-extrabold text-gray-800 hover:bg-gray-100 transition flex items-center gap-1 shadow-xs no-underline whitespace-nowrap ${page <= 1 ? 'pointer-events-none opacity-40' : ''}`}
-                >
-                  <ChevronLeft className="w-4 h-4 font-bold" /> ก่อนหน้า
-                </Link>
+                />
 
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <Link
+                  <FilterLinkButton
                     key={pageNum}
                     href={`/dashboard/inventory/boards?query=${query}&category=${category}&boardType=${boardType}&filter=${filter}&page=${pageNum}`}
+                    label={`${pageNum}`}
+                    loadingText="..."
                     className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-black transition no-underline flex-shrink-0 ${
                       page === pageNum
-                        ? 'bg-blue-600 text-white shadow-sm'
+                        ? 'bg-blue-600 text-white shadow-sm pointer-events-none'
                         : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
                     }`}
-                  >
-                    {pageNum}
-                  </Link>
+                  />
                 ))}
                 
-                <Link
+                <FilterLinkButton
                   href={`/dashboard/inventory/boards?query=${query}&category=${category}&boardType=${boardType}&filter=${filter}&page=${Math.min(page + 1, totalPages)}`}
+                  label="ถัดไป"
+                  icon={<ChevronRight className="w-4 h-4 font-bold text-right" />}
+                  loadingText="..."
                   className={`px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs font-extrabold text-gray-800 hover:bg-gray-100 transition flex items-center gap-1 shadow-xs no-underline whitespace-nowrap ${page >= totalPages ? 'pointer-events-none opacity-40' : ''}`}
-                >
-                  ถัดไป <ChevronRight className="w-4 h-4 font-bold" />
-                </Link>
+                />
               </div>
             </div>
           </>
