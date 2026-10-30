@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth"; 
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // 📌 แก้ไข Path ให้ตรงกับโครงสร้างโปรเจกต์ของคุณ
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(req: Request) {
   try {
@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const userId = session?.user?.id; // ไอดีของผู้ใช้งานระบบ
 
     const body = await req.json();
-    const { boardModelCode, name, category, boardType, model, location, stock, minQuantity, boardSerialNumber } = body;
+    const { boardModelCode, name, version, category, boardType, model, location, stock, minQuantity, boardSerialNumber } = body;
 
     if (!name || !boardModelCode) {
       return NextResponse.json({ message: "กรุณากรอกชื่อและรหัสรุ่นบอร์ด" }, { status: 400 });
@@ -27,12 +27,13 @@ export async function POST(req: Request) {
     let logType = "IMPORT"; // ค่าเริ่มต้นสำหรับเติมสต็อก
 
     if (existingPart) {
-      // ถ้ามีอยู่แล้ว ให้บวกจำนวนสต็อกเพิ่มเข้าไป พร้อมอัปเดตชื่อและประเภทบอร์ด
+      // ถ้ามีอยู่แล้ว ให้บวกจำนวนสต็อกเพิ่มเข้าไป พร้อมอัปเดตชื่อ ประเภทบอร์ด และเวอร์ชัน
       resultPart = await prisma.sparePart.update({
         where: { id: existingPart.id },
         data: {
           stock: existingPart.stock + addStock,
-          name: name || existingPart.name, // 📌 เพิ่มการอัปเดตชื่อบอร์ดอิสระ
+          name: name || existingPart.name,
+          version: version !== undefined ? version : existingPart.version, // 📌 เพิ่มการอัปเดตเวอร์ชัน
           location: location || existingPart.location,
           model: model || existingPart.model,
           boardType: boardType || existingPart.boardType,
@@ -40,13 +41,14 @@ export async function POST(req: Request) {
       });
       logType = "IMPORT"; // ประเภทเติมสต็อก
     } else {
-      // ถ้ายังไม่มี ให้สร้างรายการใหม่ พร้อมบันทึกชื่อและ boardType
+      // ถ้ายังไม่มี ให้สร้างรายการใหม่ พร้อมบันทึกชื่อ boardType และเวอร์ชัน
       resultPart = await prisma.sparePart.create({
         data: {
           boardModelCode,
-          name, // 📌 บันทึกชื่อบอร์ดอิสระ
+          name,
+          version: version || null, // 📌 บันทึกค่าเวอร์ชันลงฐานข้อมูล
           category: category || "Inverter",
-          boardType: boardType || null, // 📌 บันทึกประเภทบอร์ดมาตรฐาน
+          boardType: boardType || null,
           model: model || "",
           location: location || "",
           stock: addStock,
@@ -73,9 +75,9 @@ export async function POST(req: Request) {
       data: {
         sparePartId: resultPart.id,
         quantity: addStock,
-        type: logType, // ส่งค่าเป็น 'IMPORT' หรือ 'REGISTER'
+        type: logType,
         note: existingPart ? 'เติมสต็อกบอร์ดเข้าคลัง' : 'ลงทะเบียนบอร์ดใหม่เข้าคลัง',
-        userId: validUserId, // 📌 ใช้ตัวแปรที่ตรวจสอบแล้วว่ามีอยู่จริง หรือเป็น null ป้องกัน Error
+        userId: validUserId,
       },
     });
 
